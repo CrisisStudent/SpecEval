@@ -2225,26 +2225,17 @@ for !pm = 1 to @wcount(%sub_performance_metrics)
 
 	!sum = 0 
 	for !h = 1 to !sub_forecast_horizons_n
+
 		!value = {%{%pm}_vector}(!h)
-
-		if !value>10 then
-			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"f.0")
-		endif
-
-		if !value<10 and !value>1 then
-			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"f.2")
-		endif
-
-		if !value<1 then
-			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"g.2")
-		endif
+		call get_formated_value(!value,"metric_value")
+		tb_performance_metrics(3+!pm,1+!h) = %metric_value
 
 		!sum = !sum + !value
 	next	
 
 	!average = !sum/!sub_forecast_horizons_n
-
-	tb_performance_metrics(3+!pm,1+!sub_forecast_horizons_n+1) = @str(!average,"f.2")
+	call get_formated_value(!average,"metric_average")
+	tb_performance_metrics(3+!pm,1+!sub_forecast_horizons_n+1) = %metric_average
 	
 next
 
@@ -2282,11 +2273,18 @@ if sc_subsample_count>0 then
 		
 			!sum = 0 
 			for !h = 1 to !sub_forecast_horizons_n
-				tb_performance_metrics(!row,1+!h) = @str({%{%pm}_vector_ss{!SubSample}}(!h),"g.2")
-				!sum = !sum + {%{%pm}_vector_ss{!SubSample}}(!h)
-			next
 
-			tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = @str(!sum/!sub_forecast_horizons_n,"g.2")
+				!value = {%{%pm}_vector_ss{!SubSample}}(!h)
+				call get_formated_value(!value,"metric_value")
+				tb_performance_metrics(!row,1+!h) = %metric_value
+
+				!sum = !sum + !value
+			next
+				
+			!average = !sum/!sub_forecast_horizons_n
+			call get_formated_value(!average,"metric_average")
+			tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = %metric_average
+
 		next	
 		
 		tb_performance_metrics(!heading_row+@wcount(%sub_performance_metrics)+1,1) = "#"
@@ -2315,6 +2313,23 @@ endif
 
 endsub 
 
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine get_formated_value(scalar !sub_value,string %sub_string_name)
+
+if !value>10 then
+	%{%sub_string_name}= @str(!sub_value,"f.0")
+endif
+
+if !value<10 and !value>1 then
+	%{%sub_string_name}= @str(!sub_value,"f.2")
+endif
+
+if !value<1 then
+	%{%sub_string_name}= @str(!sub_value,"g.2")
+endif
+
+endsub
 ' ##################################################################################################################
 
 
