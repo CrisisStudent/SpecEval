@@ -6,15 +6,16 @@
 '	3) subroutine get_spec_add_info
 '	4) subroutine recursive_forecasts
 '		- subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
-'	5) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
+'	5) subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
+'	6) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
 ' 		- subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
-'	6) subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
-'	7) subroutine conditional_scenario_forecast
-'	8) subroutine performance_report
-'	9) subroutine results_aliasing(st_alias)
-'	10) subroutine cleaning_up_objects
-'	11) subroutine performance_report_multi
-'	12) subroutine speceval_store
+'	7) subroutine forecast_bias_graphs(string %sub_history_series,string %sub_master_mnemonic)
+'	8) subroutine conditional_scenario_forecast
+'	9) subroutine performance_report
+'	10) subroutine results_aliasing(st_alias)
+'	11) subroutine cleaning_up_objects
+'	12) subroutine performance_report_multi
+'	13) subroutine speceval_store
 
 
 
@@ -22,8 +23,6 @@
 ' ##################################################################################################################
 
 subroutine settings_parameters
-
-statusline Setting parameters
 
 ' 1. Execution settings
 
@@ -642,9 +641,6 @@ endsub
 
 subroutine recursive_forecasts
 
-
-statusline Recursieve forecasts ({st_spec_name})
-
 ' 1. Sample boundaries
 
 ' Main equation
@@ -710,10 +706,9 @@ for !fp = 1 to !forecastp_n
 
 next
 
-
 ' 6. Restoring orignal model
 if @upper(st_outofsample) = "T" and @upper(st_custom_reestimation)="F" and {st_spec_name}.@type<>"STRING" then
-	{%sub_cf_model_name}.replacelink {%sub_eq_name}_reest {%sub_eq_name}
+	m_speceval.replacelink {st_spec_name}_reest {st_spec_name}
 endif
 
 ' 7. Creating history series
@@ -1947,17 +1942,21 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
+subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples,string %sub_performance_metrics, string %sub_forecast_dep_var, string %sub_include_growth_rate, string %sub_forecast_horizons)
 
-statusline Forecast performance metrics	({st_spec_name})	
+!sub_forecast_horizons_n = @wcount(%sub_forecast_horizons)
 
-'1 Creating subsample information objects if they do not exist
-if @wcount(%subsamples)>0 and @isobject("st_subsample"+ @str(@wcount(%subsamples)) + "_end")=0 then
-	call SubSamples_info_objects(%subsamples)
-
-	for !subsample = 1 to sc_subsample_count
-		sc_SubSample{!SubSample}_start = @dtoo(st_subsample{!subsample}_start)-@dtoo(%sub_tfirst)+1
-	next
+'1 Creating information objects if they do not exist
+if @isobject("st_subsample"+ @str(@wcount(%subsamples)) + "_end")=0 then
+	if @wcount(%subsamples)>0 then
+		call SubSamples_info_objects(%subsamples)
+	
+		for !subsample = 1 to sc_subsample_count
+			sc_SubSample{!SubSample}_start = @dtoo(st_subsample{!subsample}_start)-@dtoo(%sub_tfirst)+1
+		next
+	else
+		scalar sc_subsample_count = 0
+	endif
 endif
 
 ' 2. Creating history series
@@ -1969,65 +1968,69 @@ else
 endif
 
 ' 3. Adjusting set of forecast horizons	
-call forecast_horizon_adjust(!sub_forecastp_n)
+call forecast_horizon_adjust(!sub_forecastp_n,%sub_forecast_horizons)
 
 ' 4. Creating performance vectors
-call performance_vectors("v_"+ %sub_EqVar, st_performance_metrics,%sub_include_growth_rate)
+call performance_vectors("v_"+ %sub_EqVar, %sub_performance_metrics,%sub_include_growth_rate)
 
 ' 5. Calculating performance metrics
-for !flength_id = 1 to sc_forecast_horizons_n
+for !flength_id = 1 to !sub_forecast_horizons_n
 	
-	!flength = @val(@word(st_forecast_horizons,!flength_id))
+	!flength = @val(@word(%sub_forecast_horizons,!flength_id))
 	
 	' Creating performance vectors
-	call fe_vectors("v_"+ %sub_EqVar,!sub_forecastp_n,%sub_tlast, !flength,st_include_growth_rate)
+	call fe_vectors("v_"+ %sub_EqVar,!sub_forecastp_n,%sub_tlast, !flength,%sub_include_growth_rate)
 	
 	'Calculating
-	call performance_calculation(%sub_EqVar, %sub_history_series, %sub_master_mnemonic, %sub_tfirst, !sub_forecastp_n, %sub_include_growth_rate)
+	call performance_calculation(%sub_EqVar, %sub_history_series, %sub_master_mnemonic, %sub_tfirst, !sub_forecastp_n, %sub_performance_metrics, %sub_include_growth_rate)
 
 next
 
 ' 6. Creating table
-call metrics_table	
+call metrics_table(%sub_performance_metrics, %sub_forecast_horizons)
 
 endsub
 
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine forecast_horizon_adjust(scalar !sub_forecastp_n)
+subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_forecast_horizons)
 
 !forecast_horizon_adjust = 0
 
-for !flength_id = 1 to sc_forecast_horizons_n
-	!flength = @val(@word(st_forecast_horizons,!flength_id))
-	
+for !flength_id = 1 to !sub_forecast_horizons_n
+	!flength = @val(@word(%sub_forecast_horizons,!flength_id))
+
 	if !sub_forecastp_n-!flength +1<=0 then
 
 		!forecast_horizon_adjust = 1
-	 	sc_forecast_horizons_n = !flength_id-1
+	 	!sub_forecast_horizons_n = !flength_id-1
 		exitloop		
 	endif
 next
 
 if !forecast_horizon_adjust = 1 then
+	%sub_forecast_horizons_o = %sub_forecast_horizons
 
-	delete(noerr) st_forecast_horizons_o
-	rename st_forecast_horizons st_forecast_horizons_o
-
-	if sc_forecast_horizons_n = 0 then
+	if !sub_forecast_horizons_n = 0 then
 		@uiprompt("There are no correct forecast horizons for model " + %alias + ". The forecast horizon was set to 1.")
-		sc_forecast_horizons_n =1
+		!sub_forecast_horizons_n =1
 
-		string st_forecast_horizons = "1"
+		%sub_forecast_horizons = "1"
 	else
 
-		string st_forecast_horizons = ""
+		%sub_forecast_horizons = ""
 
-		for !flength_id = 1 to sc_forecast_horizons_n
-			st_forecast_horizons= st_forecast_horizons + @word(st_forecast_horizons_o,!flength_id) + " "
+		for !flength_id = 1 to !sub_forecast_horizons_n
+			%sub_forecast_horizons= %sub_forecast_horizons + @word(%sub_forecast_horizons_o,!flength_id) + " "
 		next
 	endif
+
+	if @isobject("st_forecast_horizons") then
+		delete(noerr) st_forecast_horizons_o
+		rename st_forecast_horizons st_forecast_horizons_o
+		 st_forecast_horizons = %sub_forecast_horizons
+	endif 
 endif
 
 endsub
@@ -2039,20 +2042,20 @@ subroutine performance_vectors(string %sub_vector_name_prefix, string %sub_perfo
 for %pm {%sub_performance_metrics} 
 	
 	%{%pm}_vector = %sub_vector_name_prefix + "_" + %pm
-	vector(@wcount(st_forecast_horizons)) {%{%pm}_vector} = na
+	vector(!sub_forecast_horizons_n) {%{%pm}_vector} = na
 	
 	%intermediate_objects = %intermediate_objects +  %{%pm}_vector + " "
 	
 	if @upper(%sub_include_growth_rate)="T" then
 		%{%pm}_vector_growth = %sub_vector_name_prefix + "_"+ %pm  "_growth"
-		vector(@wcount(st_forecast_horizons)) {%{%pm}_vector_growth} = na
+		vector(!sub_forecast_horizons_n) {%{%pm}_vector_growth} = na
 		
 		%intermediate_objects = %intermediate_objects +  %{%pm}_vector_growth + " "
 	endif
 	
 	for !SubSample = 1 to sc_subsample_count
 		%{%pm}_vector_ss{!SubSample} = %sub_vector_name_prefix + "_" + %pm + "_ss" + @str(!SubSample) 
-		vector(@wcount(st_forecast_horizons)) {%{%pm}_vector_ss{!SubSample}} = na
+		vector(!sub_forecast_horizons_n) {%{%pm}_vector_ss{!SubSample}} = na
 		
 		%intermediate_objects = %intermediate_objects +  %{%pm}_vector_ss{!SubSample} + " "
 	next	
@@ -2064,7 +2067,6 @@ endsub
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 	
 subroutine fe_vectors(string %sub_vector_name_prefix, scalar !sub_forecastp_n, string %sub_tlast, scalar !sub_flength, string %sub_include_growth_rate)
-
 
 %sub_vector_name_suffix = "_h" + @str(!sub_flength)
 
@@ -2098,7 +2100,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine performance_calculation(string %sub_EqVar, string %sub_history_series, string %sub_master_mnemonic, string %sub_tfirst, scalar !sub_forecastp_n, string %sub_include_growth_rate)
+subroutine performance_calculation(string %sub_EqVar, string %sub_history_series, string %sub_master_mnemonic, string %sub_tfirst, scalar !sub_forecastp_n, string %sub_performance_metrics, string %sub_include_growth_rate)
 
 ' 1. Calculating forecast errors
 
@@ -2108,7 +2110,7 @@ for !fp = 1 to !sub_forecastp_n-!flength+1
 	%sub_forecast_series =  @replace(@upper(%sub_master_mnemonic),"{FSTART}",%fstart)
 
 	' Forecast errors - level
-	call forecast_error_calculation(%sub_history_series, %sub_forecast_series,@otod(@dtoo(%fstart)+!flength-1),st_percentage_error,%fe_vector,!fp) 
+	call forecast_error_calculation(%sub_history_series, %sub_forecast_series,@otod(@dtoo(%fstart)+!flength-1),%sub_include_growth_rate,%fe_vector,!fp) 
 
 	' Forecasti error - sub-samples
 	for !SubSample = 1 to sc_subsample_count
@@ -2132,7 +2134,7 @@ next
 ' 2. calculating performance metrics
 
 'RMSE
-if @upper(st_include_rmse) =  "T" then 
+if @instr(@upper(%sub_performance_metrics),"RMSE")>0 then
 	{%rmse_vector}(!flength_id) = @sqrt(@mean(@epow({%fe_vector},2)))
 	
 	for !SubSample = 1 to sc_subsample_count
@@ -2143,10 +2145,9 @@ if @upper(st_include_rmse) =  "T" then
 endif
 
 ' MAE
-if @upper(st_include_mae)=  "T" then 
-
+if @instr(@upper(%sub_performance_metrics),"MAE")>0 then
 	{%mae_vector}(!flength_id) = @mean(@abs({%fe_vector}))
-	
+
 	for !SubSample = 1 to sc_subsample_count
 		if !flength<=sc_subsample{!subsample}_length then
 			{%mae_vector_ss{!SubSample}}(!flength_id) = @mean(@abs({%fe_vector_SubSample_{!SubSample}}))
@@ -2155,7 +2156,7 @@ if @upper(st_include_mae)=  "T" then
 endif
 
 ' Bias
-if @upper(st_include_bias) =  "T" then 
+if @instr(@upper(%sub_performance_metrics),"BIAS")>0 then
 	{%bias_vector}(!flength_id) = @mean({%fe_vector})
 	
 	for !SubSample = 1 to sc_subsample_count
@@ -2184,58 +2185,74 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine metrics_table
+subroutine metrics_table(string %sub_performance_metrics, string %sub_forecast_horizons)
 
 ' 1  Creating table
 delete(noerr) tb_performance_metrics
 table tb_performance_metrics
 tb_performance_metrics(2,1) = "Metric"
 
-for !pm = 1 to @wcount(st_performance_metrics)
+for !pm = 1 to @wcount(%sub_performance_metrics)
 	
-	%pm = @word(st_performance_metrics,!pm)		
+	%pm = @word(%sub_performance_metrics,!pm)		
 
 	tb_performance_metrics(3+!pm,1) = @upper(%pm)	
 
 next
 
-tb_performance_metrics(3+@wcount(st_performance_metrics)+1,1) = "#"
+tb_performance_metrics(3+@wcount(%sub_performance_metrics)+1,1) = "#"
 
 tb_performance_metrics(1,2) = "Forecast horizons (# of steps ahead)"
 
-for !h = 1 to sc_forecast_horizons_n
+for !h = 1 to !sub_forecast_horizons_n
 	
-	%h = @word(st_forecast_horizons,!h)
+	%h = @word(%sub_forecast_horizons,!h)
 	tb_performance_metrics(2,1+!h) = @upper(%h)		
 next
 
-tb_performance_metrics(2,1+sc_forecast_horizons_n+1) = "Avg." 
+tb_performance_metrics(2,1+!sub_forecast_horizons_n+1) = "Avg." 
 
-!last_col = sc_forecast_horizons_n+2
+!last_col = !sub_forecast_horizons_n+2
 tb_performance_metrics.setlines(3,1,3,{!last_col}) +d
 tb_performance_metrics.setlines(1,2,1,{!last_col}) +b
 
 ' 2. Fillling table	
 
 ' Full sample
-for !pm = 1 to @wcount(st_performance_metrics)
+for !pm = 1 to @wcount(%sub_performance_metrics)
 	
-	%pm = @word(st_performance_metrics,!pm)		
+	%pm = @word(%sub_performance_metrics,!pm)		
 
 	!sum = 0 
-	for !h = 1 to sc_forecast_horizons_n
-		tb_performance_metrics(3+!pm,1+!h) = @str({%{%pm}_vector}(!h),"g.2")
-		!sum = !sum + {%{%pm}_vector}(!h)
+	for !h = 1 to !sub_forecast_horizons_n
+		!value = {%{%pm}_vector}(!h)
+
+		if !value>10 then
+			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"f.0")
+		endif
+
+		if !value<10 and !value>1 then
+			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"f.2")
+		endif
+
+		if !value<1 then
+			tb_performance_metrics(3+!pm,1+!h) = @str(!value,"g.2")
+		endif
+
+		!sum = !sum + !value
 	next	
 
-	tb_performance_metrics(3+!pm,1+sc_forecast_horizons_n+1) = @str(!sum/sc_forecast_horizons_n,"g.2")
+	!average = !sum/!sub_forecast_horizons_n
+
+	tb_performance_metrics(3+!pm,1+!sub_forecast_horizons_n+1) = @str(!average,"f.2")
 	
 next
 
-for !h = 1 to sc_forecast_horizons_n
-	%h = 	 @word(st_forecast_horizons,!h)
-	tb_performance_metrics(3+@wcount(st_performance_metrics)+1,1+!h) = @str({%fe_vector_name_body}_h{%h}.@rows,"f.0")
+for !h = 1 to !sub_forecast_horizons_n
+	%h = 	 @word(%sub_forecast_horizons,!h)
+	tb_performance_metrics(3+@wcount(%sub_performance_metrics)+1,1+!h) = @str({%fe_vector_name_body}_h{%h}.@rows,"f.0")
 next
+
 
 ' Sub samples
 
@@ -2248,38 +2265,38 @@ if sc_subsample_count>0 then
 		
 	
 	for !subsample = 1 to sc_subsample_count
-		!heading_row = 3+@wcount(st_performance_metrics)+2+(!subsample-1)*(@wcount(st_performance_metrics)+2)+1
+		!heading_row = 3+@wcount(%sub_performance_metrics)+2+(!subsample-1)*(@wcount(%sub_performance_metrics)+2)+1
 	
 		tb_performance_metrics(!heading_row,1) =@mid(st_subsample{!SubSample}_start,3)+"_" + @mid(st_subsample{!SubSample}_end,3)
 		tb_performance_metrics.setfont(!heading_row,1) +b
 		tb_performance_metrics.setjust(!heading_row,1) left			
 
 
-		for !pm = 1 to @wcount(st_performance_metrics)
+		for !pm = 1 to @wcount(%sub_performance_metrics)
 			
-			%pm = @word(st_performance_metrics,!pm)		
+			%pm = @word(%sub_performance_metrics,!pm)		
 			
 			!row = !heading_row + !pm
 			
 			tb_performance_metrics(!row,1) = @upper(%pm)
 		
 			!sum = 0 
-			for !h = 1 to sc_forecast_horizons_n
+			for !h = 1 to !sub_forecast_horizons_n
 				tb_performance_metrics(!row,1+!h) = @str({%{%pm}_vector_ss{!SubSample}}(!h),"g.2")
 				!sum = !sum + {%{%pm}_vector_ss{!SubSample}}(!h)
 			next
 
-			tb_performance_metrics(!row,1+sc_forecast_horizons_n+1) = @str(!sum/sc_forecast_horizons_n,"g.2")
+			tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = @str(!sum/!sub_forecast_horizons_n,"g.2")
 		next	
 		
-		tb_performance_metrics(!heading_row+@wcount(st_performance_metrics)+1,1) = "#"
+		tb_performance_metrics(!heading_row+@wcount(%sub_performance_metrics)+1,1) = "#"
 		
-		for !h = 1 to sc_forecast_horizons_n
-			%h = 	 @word(st_forecast_horizons,!h)
+		for !h = 1 to !sub_forecast_horizons_n
+			%h = 	 @word(%sub_forecast_horizons,!h)
 			'v.@droprow(@emult(@eneq(v, v), @ranks(@ones(@rows(v)), "a", "i"))) - removing NAs
 
 			if @isobject(%fe_vector_name_body + "_ss"+ @str(!subsample) + "_h"+ %h) then
-				tb_performance_metrics(!heading_row+@wcount(st_performance_metrics)+1,1+!h) = @str({%fe_vector_name_body}_ss{!subsample}_h{%h}.@rows,"f.0")
+				tb_performance_metrics(!heading_row+@wcount(%sub_performance_metrics)+1,1+!h) = @str({%fe_vector_name_body}_ss{!subsample}_h{%h}.@rows,"f.0")
 			endif
 		next
 	next
@@ -2303,11 +2320,10 @@ endsub
 
 
 
+
 ' ##################################################################################################################
 
 subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
-
-statusline Foreacst perforamnce graphs ({st_spec_name})
 
 ' 1. All forecasts
 
@@ -2686,8 +2702,6 @@ endsub
 ' ##################################################################################################################
 
 subroutine conditional_scenario_forecast
-	
-statusline Conditional scenario forecasts	
 	
 ' 1. Creating forecast model
 if @isobject("m_speceval")=0 then
@@ -3290,8 +3304,6 @@ endsub
 ' ##################################################################################################################
 
 subroutine performance_report
-
-statusline Creating performance reports ({st_spec_name})
 
 '1. Creating spool
 delete(noerr) sp_spec_evaluation
@@ -4073,8 +4085,6 @@ endsub
 
 subroutine results_aliasing(string %sub_alias)
 
-statusline Storing results with alias ({st_spec_name})
-
 ' Creating object list
 if sc_spec_count>1 then
 	%object_list = "sp_spec_evaluation tb_performance_metrics tb_reg_output"
@@ -4160,8 +4170,6 @@ endsub
 
 subroutine cleaning_up_objects
 
-statusline Cleaning up ({st_spec_name})
-
 ' 1. Cleaning up intermediate objects
 if @upper(st_keep_objects)="F" then
 	delete(noerr) {%intermediate_objects}
@@ -4244,8 +4252,6 @@ endsub
 ' ##################################################################################################################
 
 subroutine performance_report_multi
-
-statusline Creating multiple-specification performance report
 
 ' 1. Individual reports aggregated
 delete(noerr) sp_spec_evaluation_specs

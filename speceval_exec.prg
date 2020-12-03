@@ -1,5 +1,6 @@
 include .\include_list.prg
 
+statusline Setting parameters
 call settings_parameters
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -16,6 +17,7 @@ for !spec_id = 1 to sc_spec_count
 	' ##### 2.0 Creating recursive forecasts ###########
 	' ##########################################
 	
+	statusline Recursieve forecasts ({st_spec_name})
 	call recursive_forecasts
 	
 	' ####################################################
@@ -23,8 +25,11 @@ for !spec_id = 1 to sc_spec_count
 	' ####################################################	
 	
 	if @instr(@upper(st_exec_list),"METRICS") then
+
+		statusline Forecast performance metrics	({%sub_spec_name})	
+
 		%master_mnemonic = st_base_var + "_f{fstart}"
-		call performance_metrics(st_base_var,%master_mnemonic, sc_forecastp_n,st_tfirst_backtest,st_tfirst_backtest,st_subsamples,st_forecast_dep_var,st_include_growth_rate)
+		call performance_metrics(st_base_var,%master_mnemonic, sc_forecastp_n,st_tfirst_backtest,st_tfirst_backtest,st_subsamples,st_performance_metrics,st_forecast_dep_var,st_include_growth_rate,st_forecast_horizons)
 	endif
 	
 	' ##################################################
@@ -32,6 +37,7 @@ for !spec_id = 1 to sc_spec_count
 	' ##################################################
 	
 	if @instr(@upper(st_exec_list),"GRAPHS") then
+		statusline Foreacst perforamnce graphs ({st_spec_name})
 		call forecast_graphs(st_base_var, st_spec_name, sc_forecastp_n, st_tfirst_backtest,st_tlast_backtest)
 	endif
 
@@ -44,6 +50,7 @@ for !spec_id = 1 to sc_spec_count
 	' ######################################
 	
 	if @instr(@upper(st_exec_list),"SCENARIOS") then
+		statusline Conditional scenario forecasts	
 		call conditional_scenario_forecast
 	endif
 		
@@ -51,6 +58,7 @@ for !spec_id = 1 to sc_spec_count
 	' ##### 5.0 Creating perfromance report ###########
 	' ##########################################
 	
+	statusline Creating performance reports ({st_spec_name})
 	call performance_report
 	
 	' ############################################
@@ -59,10 +67,12 @@ for !spec_id = 1 to sc_spec_count
 	
 	' Storing results 
 	if sc_spec_count>1 or @isempty(st_alias)=0 then
+		statusline Storing results with alias ({st_spec_name})
 		call results_aliasing(st_alias)
 	endif
 	
 	'Cleaning up
+	statusline Cleaning up ({st_spec_name})
 	call cleaning_up_objects
 
 	
@@ -77,6 +87,7 @@ next
 ' ########################################################
 
 if sc_spec_count>1 then
+	statusline Creating multiple-specification performance report
 	call performance_report_multi
 endif
 
