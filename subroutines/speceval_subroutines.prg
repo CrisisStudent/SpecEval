@@ -2389,14 +2389,14 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 				endif
 	
 				%ss_alias = "_f" +st_subsample1_start
+				%ss_graph_name = "gp_forecast_subsample"+ @str(!subsample) + "_fd"
+				delete(noerr) {%ss_graph_name}		
 	
-				{%ss_eq}.fd(sample=%ss_sample,alias_list=%ss_alias, include_addf="f",keep_table="t")
+				{%ss_eq}.fcastdecomp(scenarios=%ss_alias, include_addf="f",sample=%ss_sample,keep_table="t",graph_name=%ss_graph_name)
 	
-				if @isobject("gp_fd") then
-					gp_fd.addtext(t) Decomposition of conditional forecast for {%ss_sample}
-					gp_fd.setattr("desc") Decomposition of conditional forecast for {%ss_sample}
-					copy(o) gp_fd gp_subsample{!subsample}_fd
-					delete(noerr) gp_fd
+				if @isobject(%ss_graph_name) then
+					{%ss_graph_name}.addtext(t) Decomposition of conditional forecast for {%ss_sample}
+					{%ss_graph_name}.setattr("desc") Decomposition of conditional forecast for {%ss_sample}
 				endif
 			endif
 		endif
@@ -2800,26 +2800,27 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") then
 	%csf_sample = st_tfirst_scenarios  + " " + st_tlast_scenarios
 	for %s {st_scenarios}
 		%alias = "_csf" + %s + "[" +"_"+  %s + "]"
-		{st_spec_name}.fd(sample=%csf_sample,alias_list=%alias,include_addf="f",keep_table="t",use_table="t")
+		%graph_name = "gp_csf_fd_" + %s
 
-		if @isobject("gp_fd") then
+		{st_spec_name}.fcastdecomp(scenarios=%alias,include_addf="f",sample=%csf_sample,keep_table="t",use_table="t",graph_name=%graph_name)
+
+		if @isobject(%graph_name) then
 			%desc = "Decomposition of conditional "+ %scenario + " forecast"
-			gp_fd.addtext(t) {%desc}
-			gp_fd.setattr(description) {%desc}
-			copy(o) gp_fd gp_csf_fd_{%s}
+			{%graph_name}.addtext(t) {%desc}
+			{%graph_name}.setattr(description) {%desc}
 		endif
 	next
 
 	for !s = 2 to @wcount(st_scenarios)
 		%alias_list = "_csf" + "_"+ @word(st_scenarios,!s)  +"[" + "_"+ @word(st_scenarios,!s)   + "]" +  " " +"_csf"+  @word(st_scenarios,1)  +"[" + "_"+ @word(st_scenarios,1)   + "]" 
+		%graph_name = "gp_csf_fdd_" + %s
 
-		{st_spec_name}.fd(sample=%csf_sample,alias_list=%alias_list,include_addf="f",keep_table="t")
+		{st_spec_name}.fcastdecomp(scenarios=%alias_list,include_addf="f",sample=%csf_sample,keep_table="t",graph_name=%graph_name)
 
-		if @isobject("gp_fd") then
+		if @isobject(%graph_name) then
 			%desc = "Decomposition of conditional "+ %scenario + "-" + @word(st_scenarios,1)  + " forecast"
-			gp_fd.addtext(t) {%desc}
-			gp_fd.setattr(description) {%desc}
-			copy(o) gp_fd gp_csf_fdd_{%s}
+			{%graph_name}.addtext(t) {%desc}
+			{%graph_name}.setattr(description) {%desc}
 		endif
 	next
 

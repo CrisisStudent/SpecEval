@@ -433,16 +433,16 @@ subroutine include_list
 delete(noerr) tx_include_list
 text tx_include_list
 
-%subroutines = @linepath + "speceval_subroutines.prg"
+%subroutines = @linepath + "subroutines\speceval_subroutines.prg"
 tx_include_list.append include %subroutines
 
-%include_list_path = %add_in_path + "include_list.prg"
+%include_list_path = %add_in_path + "subroutines\include_list.prg"
 
 if @upper(st_custom_reestimation)="T" then
 	%custom_reest_file_path = @runpath + "\custom_reestimation.prg"
 
 	if @fileexist(%custom_reest_file_path)=0 then 
-		%custom_reest_file_path = @linepath + "reestimation_custom.prg"
+		%custom_reest_file_path = @linepath + "subroutines\reestimation_custom.prg"
 	endif 
 
 	tx_include_list.append include {%custom_reest_file_path}
@@ -452,7 +452,7 @@ if @wcount(st_scenarios)>0  and @upper(st_scenario_dataload)="T" then
 	%dataload_file_path = @runpath + "\scenario_dataload.prg"
 
 	if @fileexist(%dataload_file_path)=0 then 
-		%dataload_file_path = @linepath  + "scenario_dataload.prg"
+		%dataload_file_path = @linepath  + "subroutines\scenario_dataload.prg"
 	endif 
 
 	tx_include_list.append include {%dataload_file_path}

@@ -1,4 +1,4 @@
-include .\include_list.prg
+include .\subroutines\include_list.prg
 
 statusline Setting parameters
 call settings_parameters
