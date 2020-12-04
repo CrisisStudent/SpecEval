@@ -433,8 +433,8 @@ subroutine include_list
 delete(noerr) tx_include_list
 text tx_include_list
 
-%subroutines = @linepath + "subroutines\speceval_subroutines.prg"
-tx_include_list.append include %subroutines
+'%subroutines = @linepath + "subroutines\speceval_subroutines.prg"
+'tx_include_list.append include %subroutines
 
 %include_list_path = %add_in_path + "subroutines\include_list.prg"
 

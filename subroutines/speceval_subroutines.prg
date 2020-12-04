@@ -378,7 +378,9 @@ endsub
 
 subroutine base_var_ident
 
-string st_spec_name = _this.@name
+if @isempty(st_spec_name) then
+	string st_spec_name = _this.@name
+endif
 
 if _this.@type = "EQUATION" then
 	{st_spec_name}.makeregs gr_regs
@@ -445,6 +447,7 @@ if sc_spec_count>1 then
 else
 	string st_alias = st_spec_alias_list					
 endif
+
 
 ' Underlying dependent variable
 if {st_spec_name}.@type="EQUATION" or {st_spec_name}.@type="STRING" then
@@ -1280,6 +1283,11 @@ if @upper(st_custom_reestimation)="F" then
 	if @upper(st_auto_selection)="T" and @upper(st_auto_type) = "ARDL"  and !fp=1 then			
 		%depvar = gr_{%sub_eq_name}_regs.@seriesname(1)
 		m_speceval.append {%depvar}=s_depvar
+
+		for !reg = 1 to !reg_n	
+			%reg = @word(%regs,!reg)
+			m_fp.append  s_reg{!reg} = {%reg}
+		next
 	endif		
 else
 	' Performing custom reestimation

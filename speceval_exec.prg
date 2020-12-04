@@ -1,3 +1,4 @@
+include .\subroutines\speceval_subroutines.prg
 include .\subroutines\include_list.prg
 
 statusline Setting parameters
@@ -9,10 +10,12 @@ call settings_parameters
 
 for !spec_id = 1 to sc_spec_count
 	
+	statusline Specification information  ({!spec_id})
 	%intermediate_objects = ""
 	call get_spec_info
 	call get_spec_add_info
-	
+
+
 	' ##########################################
 	' ##### 2.0 Creating recursive forecasts ###########
 	' ##########################################
@@ -26,7 +29,7 @@ for !spec_id = 1 to sc_spec_count
 	
 	if @instr(@upper(st_exec_list),"METRICS") then
 
-		statusline Forecast performance metrics	({%sub_spec_name})	
+		statusline Forecast performance metrics	({st_spec_name})	
 
 		%master_mnemonic = st_base_var + "_f{fstart}"
 		call performance_metrics(st_base_var,%master_mnemonic, sc_forecastp_n,st_tfirst_backtest,st_tfirst_backtest,st_subsamples,st_performance_metrics,st_forecast_dep_var,st_include_growth_rate,st_forecast_horizons)
