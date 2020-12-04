@@ -284,7 +284,8 @@ scalar sc_bias_horizons_n = @wcount(st_bias_horizons)
 if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
 	
 	if @isempty(st_base_var) then
-		call  base_var_ident
+		string st_spec_name = _this.@name
+		call  base_var_ident(st_spec_name)
 	endif
 	!trend_default = 0
 
@@ -314,6 +315,8 @@ if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
 			endif
 		endif
 
+		%intermediate_objects = %intermediate_objects + "et_" + st_base_var +  " "
+
 	endif
 	
 	delete(noerr) s_depvar
@@ -321,6 +324,7 @@ if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
 	if @upper(st_keep_information)="F" then
 		delete(noerr) et_{st_base_var}
 	endif
+
 endif
 
 ' 5. Additional graph settings
@@ -376,30 +380,28 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine base_var_ident
-
-if @isempty(st_spec_name) then
-	string st_spec_name = _this.@name
-endif
+subroutine base_var_ident(string %sub_spec_name)
 
 if _this.@type = "EQUATION" then
-	{st_spec_name}.makeregs gr_regs
+	{%sub_spec_name}.makeregs gr_regs
 	string st_base_var = @word(gr_regs.@depends,1) 'dependent variable without transformations
-	string st_depvar = @word({st_spec_name}.@spec,1)
+	string st_depvar = @word({%sub_spec_name}.@spec,1)
 endif
 
 if _this.@type = "VAR" then
-	{st_spec_name}.makeendog gr_regs
+	{%sub_spec_name}.makeendog gr_regs
 	string st_base_var = @word(gr_regs.@depends,1) 
 endif
 
 if _this.@type = "STRING" then
-	%spec = {st_spec_name}
+	%spec = {%sub_spec_name}
 	%regs = @replace(%spec,"=","")
 	group gr_regs {%regs}
 	string st_base_var = @word(gr_regs.@depends,1)
 	string st_depvar = @left(%spec,@instr(%spec,"=")-1)
 endif
+
+%intermediate_objects = %intermediate_objects + "st_depvar" + " "
 
 endsub
 
@@ -451,7 +453,7 @@ endif
 
 ' Underlying dependent variable
 if {st_spec_name}.@type="EQUATION" or {st_spec_name}.@type="STRING" then
-	call  base_var_ident
+	call  base_var_ident(st_spec_name)
 endif
 
 ' Auto select in case multiple arguments were specifed
@@ -709,7 +711,7 @@ for !fp = 1 to !forecastp_n
 
 next
 
-' 6. Restoring orignal model
+' 6. Restoring original model
 if @upper(st_outofsample) = "T" and @upper(st_custom_reestimation)="F" and {st_spec_name}.@type<>"STRING" then
 	m_speceval.replacelink {st_spec_name}_reest {st_spec_name}
 endif
@@ -719,7 +721,13 @@ smpl @all
 series s_history_series = {%history_series}
 
 ' 8. Cleaning up
-delete(noerr) {st_base_var}_f {st_spec_name}_reest
+
+delete(noerr) {st_spec_name}_reest
+
+%all_fvars = m_speceval.@endoglist
+for  %fvar {%all_fvars}
+	delete(noerr) {%fvar}_f
+next
 
 endsub
 
@@ -843,7 +851,6 @@ subroutine sb_identification_identity(string %sub_identity_name)
 %lhs_string = @left({%sub_identity_name},@instr({%sub_identity_name},"=")-1)
 %rhs_string = @right({%sub_identity_name},@length({%sub_identity_name})-@instr({%sub_identity_name},"="))
 
-
 smpl @all
 series s_lhs = {%lhs_string}
 series s_rhs = {%rhs_string}
@@ -865,6 +872,8 @@ if @dtoo(%tlast_lhs)>@dtoo(%tlast_rhs) then
 else
 	%tlast = %tlast_lhs
 endif 	
+
+%intermediate_objects = %intermediate_objects + "s_lhs s_rhs" + " "
 
 endsub
 
@@ -1286,7 +1295,7 @@ if @upper(st_custom_reestimation)="F" then
 
 		for !reg = 1 to !reg_n	
 			%reg = @word(%regs,!reg)
-			m_fp.append  s_reg{!reg} = {%reg}
+			m_speceval.append  s_reg{!reg} = {%reg}
 		next
 	endif		
 else
@@ -2529,7 +2538,7 @@ endif
 
 ' 6. Cleaning up
 
-for !f = 1 to !sub_forecastp_n-1		
+for !f = 1 to !sub_forecastp_n		
 	%fstart = @otod(@dtoo(%sub_tfirst)+!f-1)		
 	delete(noerr) forecast{%fstart}
 next
@@ -3885,6 +3894,9 @@ for !coef = 1 to !coef_n
 	delete(noerr) gp_coefs{!coef}
 next
 
+%intermediate_objects = %intermediate_objects + "gp_coef_stability" + " "
+
+
 endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -3949,7 +3961,6 @@ for !l = 1 to sc_maxma
 	%eq_varlist = %eq_varlist + " " + "ma" +  "(" + @str(!l) + ")"
 next
 
-
 endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -3968,6 +3979,8 @@ if @upper(st_auto_type) = "VAR" then
 	smpl {st_tfirst_backtest}   {st_tlast_backtest}
 	graph gp_lag_orders.line s_laglength
 endif
+
+%intermediate_objects = %intermediate_objects + "gp_lag_orders" + " "
 
 endsub
 
@@ -4036,6 +4049,8 @@ for !reg = 1 to !reg_n
 	gp_lag_orders.setelem(!e) legend(Regressor {!reg} lags) symbol({%sym})
 next
 
+%intermediate_objects = %intermediate_objects + "gp_lag_orders" + " "
+
 endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -4097,6 +4112,8 @@ if sc_maxar>0 then
 	!e = !e+ 1
 	gp_lag_orders.setelem(!e) legend(MA lags) symbol(circle) symbolsize(small)
 endif
+
+%intermediate_objects = %intermediate_objects + "gp_lag_orders" + " "
 
 endsub
 
@@ -4221,7 +4238,7 @@ if @upper(st_keep_equations)="F" then
 endif	
 	
 ' 3. Cleaning up process information objects
- if @upper(st_keep_information)="F" then
+if @upper(st_keep_information)="F" then
 	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{st_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
 	
 	if @isobject("st_eq_list_add_final") then
@@ -4661,7 +4678,7 @@ endif
 if @upper(st_keep_objects)="F" then
 	for !spec_id = 1 to sc_spec_count
 		call spec_alias
-		delete(noerr)  sp_spec_evaluation_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} sp_spec_evaluation_{st_alias} 
+		delete(noerr)  sp_spec_evaluation_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} gp_coef_stability_{st_alias} gp_lag_orders_{st_alias} sp_spec_evaluation_{st_alias} 
 	next
 endif
 

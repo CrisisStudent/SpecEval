@@ -111,19 +111,24 @@ statusline Specification evaluation is done.
 ' ##### 9.0 Cleaning up settings objects ###########
 ' ############################################
 
+if @upper(st_keep_information)="F" then	
+	delete(noerr) st_auto_type 
+endif
+
 if @upper(st_keep_settings)="F" then	
 	delete(noerr) sc_bias_horizons_n st_bias_horizons sc_forecast_horizons_n st_forecast_horizons sc_graph_horizons_n st_graph_horizons _
 	st_transformation st_outofsample sc_subsample_count st_subsamples st_performance_metrics _
 	st_spec_alias_list st_specification_list sc_spec_count  st_base_var  st_alias st_spec_name _
 	st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user _ 
 	st_subsample{!SubSample} st_subsample{!SubSample}_start st_subsample{!SubSample}_end _
-	st_include_bias st_include_mae st_include_rmse _
+	st_include_bias st_include_mae st_include_rmse st_percentage_error _
 	st_auto_selection st_custom_reestimation st_forecast_dep_var st_include_growth_rate _
 	st_scenarios st_scenario_dataload st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph _
 	st_graph_add_backtest st_graph_add_scenarios st_include_baseline st_include_original st_index_period st_spread_benchmark st_add_scenarios _
 	st_eq_list_add sc_add_eq_count st_model_name_add st_forecasted_ivariables _ 
-	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names _
+	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names st_save_output st_include_descriptions _
 	st_exec_list st_exec_list_user st_ignore_errors
 endif
+
 
 
