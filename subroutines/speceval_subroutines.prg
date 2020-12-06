@@ -2,19 +2,31 @@
 '	1) subroutine settings_parameters
 '		- subroutine base_var_ident
 '		- subroutine SubSamples_info_objects(string %subsamples)
+
 '	2) subroutine get_spec_info
+
 '	3) subroutine get_spec_add_info
+
 '	4) subroutine recursive_forecasts
 '		- subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
+
 '	5) subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
+
 '	6) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
 ' 		- subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
+
 '	7) subroutine forecast_bias_graphs(string %sub_history_series,string %sub_master_mnemonic)
+
 '	8) subroutine conditional_scenario_forecast
+
 '	9) subroutine performance_report
+
 '	10) subroutine results_aliasing(st_alias)
+
 '	11) subroutine cleaning_up_objects
+
 '	12) subroutine performance_report_multi
+
 '	13) subroutine speceval_store
 
 
@@ -2241,16 +2253,20 @@ for !pm = 1 to @wcount(%sub_performance_metrics)
 	%pm = @word(%sub_performance_metrics,!pm)		
 
 	!sum = 0 
+	!horizons_count = 0
 	for !h = 1 to !sub_forecast_horizons_n
 
 		!value = {%{%pm}_vector}(!h)
 		call get_formated_value(!value,"metric_value")
 		tb_performance_metrics(3+!pm,1+!h) = %metric_value
 
-		!sum = !sum + !value
+		if @isna(!value)=0 then
+			!sum = !sum + !value
+			!horizons_count = !horizons_count +1 
+		endif
 	next	
 
-	!average = !sum/!sub_forecast_horizons_n
+	!average = !sum/!horizons_count
 	call get_formated_value(!average,"metric_average")
 	tb_performance_metrics(3+!pm,1+!sub_forecast_horizons_n+1) = %metric_average
 	
@@ -2289,17 +2305,22 @@ if sc_subsample_count>0 then
 			tb_performance_metrics(!row,1) = @upper(%pm)
 		
 			!sum = 0 
+			!horizons_count = 0
 			for !h = 1 to !sub_forecast_horizons_n
 
 				!value = {%{%pm}_vector_ss{!SubSample}}(!h)
 				call get_formated_value(!value,"metric_value")
 				tb_performance_metrics(!row,1+!h) = %metric_value
 
-				!sum = !sum + !value
+				if @isna(!value)=0 then
+					!sum = !sum + !value
+					!horizons_count = !horizons_count +1 
+				endif
 			next
-				
-			!average = !sum/!sub_forecast_horizons_n
+			
+			!average = !sum/!horizons_count
 			call get_formated_value(!average,"metric_average")
+
 			tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = %metric_average
 
 		next	
@@ -2334,19 +2355,24 @@ endsub
 
 subroutine get_formated_value(scalar !sub_value,string %sub_string_name)
 
-if !value>10 then
+if @abs(!sub_value)>10 then
 	%{%sub_string_name}= @str(!sub_value,"f.0")
 endif
 
-if !value<10 and !value>1 then
+if @abs(!sub_value)<10 and @abs(!sub_value)>1 then
 	%{%sub_string_name}= @str(!sub_value,"f.2")
 endif
 
-if !value<1 then
+if @abs(!sub_value)<1 then
 	%{%sub_string_name}= @str(!sub_value,"g.2")
 endif
 
+if @isna(!sub_value) then
+	%{%sub_string_name}= @str(!sub_value)
+endif
+
 endsub
+
 ' ##################################################################################################################
 
 
@@ -4211,6 +4237,19 @@ endsub
 
 subroutine cleaning_up_objects
 
+' 0. Settings values
+if @isobject("sc_forecastp_n") then
+	!sub_forecastp_n = sc_forecastp_n
+else
+	!sub_forecastp_n = sc_forecastp_n_{st_alias}
+endif
+
+if @isobject("st_tfirst_backtest") then
+	%sub_tfirst_backtest = st_tfirst_backtest
+else
+	%sub_tfirst_backtest = st_tfirst_backtest_{st_alias}
+endif
+
 ' 1. Cleaning up intermediate objects
 if @upper(st_keep_objects)="F" then
 	delete(noerr) {%intermediate_objects}
@@ -4218,8 +4257,8 @@ endif
 
 ' 2. Cleaning up forecasts
 if @upper(st_keep_forecasts)="F" then				
-	for !fp = 1 to sc_forecastp_n
-		%fstart = @otod(@dtoo(st_tfirst_backtest)+!fp-1)
+	for !fp = 1 to !sub_forecastp_n
+		%fstart = @otod(@dtoo(%sub_tfirst_backtest)+!fp-1)
 		delete(noerr) {st_base_var}_f{%fstart}
 	next
 
@@ -4229,14 +4268,15 @@ if @upper(st_keep_forecasts)="F" then
 		next
 	endif
 endif
-	
+
 ' 3. Cleaning up equations
 if @upper(st_keep_equations)="F" then				
-	for !fp = 1 to sc_forecastp_n
+	for !fp = 1 to !sub_forecastp_n
 		delete(noerr) {st_spec_name}_reest{!fp}
 	next
 endif	
-	
+
+
 ' 3. Cleaning up process information objects
 if @upper(st_keep_information)="F" then
 	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{st_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
@@ -4439,8 +4479,6 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 
 endif
 
-
-'bbb
 
 'Subsamples
 if @instr(@upper(st_exec_list),"GRAPHS_SS") then
