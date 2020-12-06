@@ -62,7 +62,7 @@ for !spec_id = 1 to sc_spec_count
 	' ##########################################
 	
 	statusline Creating performance reports ({st_spec_name})
-	call performance_report
+	call evaluation_report
 	
 	' ############################################
 	' ##### 6.0 Storing results and cleaning up ###########
@@ -91,7 +91,7 @@ next
 
 if sc_spec_count>1 then
 	statusline Creating multiple-specification performance report
-	call performance_report_multi
+	call evaluation_multireport
 endif
 
 ' ############################################
@@ -129,6 +129,5 @@ if @upper(st_keep_settings)="F" then
 	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names st_save_output st_include_descriptions _
 	st_exec_list st_exec_list_user st_ignore_errors
 endif
-
 
 

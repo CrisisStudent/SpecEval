@@ -19,13 +19,13 @@
 
 '	8) subroutine conditional_scenario_forecast
 
-'	9) subroutine performance_report
+'	9) subroutine evaluation_report
 
 '	10) subroutine results_aliasing(st_alias)
 
 '	11) subroutine cleaning_up_objects
 
-'	12) subroutine performance_report_multi
+'	12) subroutine evaluation_multireport
 
 '	13) subroutine speceval_store
 
@@ -3362,7 +3362,7 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine performance_report
+subroutine evaluation_report
 
 '1. Creating spool
 delete(noerr) sp_spec_evaluation
@@ -3409,7 +3409,7 @@ if @upper(st_outofsample)="T" and @instr(@upper(st_exec_list),"STABILITY") then
 		if @upper(st_auto_type) = "ARMA" then
 			%obj_desc = %obj_desc + "of autoregressive and moving average components "
 		endif
-		if @upper(st_auto_type) = "ARMA" then
+		if @upper(st_auto_type) = "ARDL" then
 			%obj_desc = %obj_desc + "of dependent and independet variables "
 		endif
 		%obj_desc = %obj_desc + "corresponding to different estimation samples (dates indicate end of estiamtion sample)"
@@ -4332,7 +4332,7 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine performance_report_multi
+subroutine evaluation_multireport
 
 ' 1. Individual reports aggregated
 delete(noerr) sp_spec_evaluation_specs
@@ -4384,6 +4384,25 @@ if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
  	sp_spec_evaluation.comment coefficient_stability %comment
 
 endif
+
+
+' 2.2. Auto orders graphs
+if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
+	
+	delete(noerr) sp_lag_orders
+	spool sp_lag_orders
+	call insert_specs("sp_lag_orders","gp_lag_orders", st_use_names)
+	
+	sp_spec_evaluation.insert(name=lag_orders) sp_lag_orders
+	delete(noerr) sp_lag_orders
+
+	%obj_name =  "Automatically selected lag orders" 
+	%obj_desc = "- Automatically selected number of lags (of autoregressive and moving average components for ARMA models; of dependent and independet variables for ARDL models)" 
+	call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
+ 	sp_spec_evaluation.comment lag_orders %comment
+
+endif
+
 
 
 ' 2.3 Forecast performance metrics
@@ -4733,7 +4752,7 @@ subroutine insert_specs(string %sub_spool_name,string %sub_object_name, string %
 for !spec_id = 1 to sc_spec_count
 	call spec_alias
 	
-	if @isobject("tb_reg_output_"  + st_alias) then
+	if @isobject(%sub_object_name  + "_"+ st_alias) then
 		call insert_spec(%sub_spool_name,%sub_object_name, %sub_use_names)
 	endif
 next
