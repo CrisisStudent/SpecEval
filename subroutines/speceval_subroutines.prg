@@ -42,7 +42,7 @@ subroutine settings_parameters
 %graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
 %scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS"
 
-%full_component_list = " METRICS GRAPHS SCENARIOS DECOMPOSITION REG_OUTPUT STABILITY "
+%full_component_list = " FORECASTS METRICS GRAPHS SCENARIOS DECOMPOSITION REG_OUTPUT STABILITY "
 
 %multiple_components_list = "ALL SHORT MEDIUM LONG"
 
@@ -73,7 +73,7 @@ endif
 
 ' Dealing with length options
 if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
-	st_exec_list = @replace(@upper(st_exec_list),"SHORT","METRICS GRAPHS_SUMMARY REG_OUTPUT")
+	st_exec_list = @replace(@upper(st_exec_list),"SHORT","FORECASTS METRICS GRAPHS_SUMMARY REG_OUTPUT")
 
 	if @isempty(st_forecast_horizons) then
 		string st_forecast_horizons = "8 24"
@@ -82,7 +82,7 @@ if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
 endif
 
 if @instr(" " + @upper(st_exec_list) + " "," MEDIUM ") then
-	st_exec_list = @replace(@upper(st_exec_list),"MEDIUM","METRICS GRAPHS_SUMMARY GRAPHS_SS SCENARIOS_ALL REG_OUTPUT")
+	st_exec_list = @replace(@upper(st_exec_list),"MEDIUM","FORECASTS METRICS GRAPHS_SUMMARY GRAPHS_SS SCENARIOS_ALL REG_OUTPUT")
 
 '	if @isempty(st_forecast_horizons) then
 '		string st_forecast_horizons = "8 24"
@@ -192,7 +192,7 @@ if sc_spec_count>1 then
 endif
 
 'Procesing alias in name setting
-if @upper(st_spec_alias_list)="NAME" then
+if @upper(st_spec_alias_list)="NAME" and @wcount(%patterns)>0 then
 	
 	%spec_name_masters = ""
 	
@@ -462,7 +462,6 @@ else
 	string st_alias = st_spec_alias_list					
 endif
 
-
 ' Underlying dependent variable
 if {st_spec_name}.@type="EQUATION" or {st_spec_name}.@type="STRING" then
 	call  base_var_ident(st_spec_name)
@@ -481,7 +480,7 @@ string st_auto_type = ""
 if @upper(st_auto_selection)="T" then
 	
 	%command = {st_spec_name}.@command	
-	
+
 	if @left(@upper(%command),4) = "ARDL" then
 		string st_auto_type = "ARDL"
 	endif
@@ -1117,7 +1116,13 @@ string st_auto_info = ""
 if @instr(@upper(%command),"IC=")>0 then
 	%selection_info = @mid(%command,@instr(@upper(%command),"IC="))
 	%selection_info = @mid(%selection_info,@instr(@upper(%selection_info),"=")+1)
-	st_auto_info  = @left(%selection_info ,@instr(%selection_info ,")")-1)
+
+	if @instr(@upper(%selection_info),",")>0 then
+		st_auto_info  = @left(%selection_info ,@instr(%selection_info ,",")-1)
+	else
+		st_auto_info  = @left(%selection_info ,@instr(%selection_info ,")")-1)
+	endif
+
 endif
 
 if @isempty(st_auto_info) then
@@ -1416,6 +1421,10 @@ endif
 %est_command_reest = @trim(%est_command_reest)
 
 ' 3. Removing perfect correlation regressors
+if @instr("  "  + @upper(%eq_command_reest) + " "," C ")=0 and !reg_n=2  then
+	%perfectcor = "f"  
+endif
+
 if %perfectcor = "t" then
 	for !reg = 2 to  !reg_n
 		if !perfectcor{!reg} = 1 then
@@ -1509,35 +1518,13 @@ endsub
 subroutine reestimation_auto_ardl(string %sub_eq_name, string %sub_use_existing_table)
 	
 ' 1. Determining dependent variable and regressors
-if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
-	%regressors = @mid(%command,@instr(%command,") ")+1)
-	%regressors = @replace(%regressors," @","")
-	group gr_{%sub_eq_name}_regs {%regressors}
-endif	
-
-%depvar = gr_{%sub_eq_name}_regs.@seriesname(1)
-
-smpl @all
-%regs = gr_{%sub_eq_name}_regs.@members
-%regs = @replace(@upper(%regs),@upper(%depvar),"")
-
-!reg_n = @wcount(%regs)
-
-smpl @all
-series s_depvar = {%depvar}
-
-for !reg = 1 to !reg_n	
-	%reg = @word(%regs,!reg)
-	series s_reg{!reg} = {%reg}
-next
+call auto_ardl_reg_series(%sub_eq_name)
 
 ' 2. Determining maximum orders and IC
 
 %command = {%sub_eq_name}.@command
 
 call ardl_auto_select_options(%sub_eq_name,"")
-
-
 
 ' 3. Creating table
 if @upper(%sub_use_existing_table)="F"  or @isobject("tb_ardl_models")=0 then
@@ -1725,20 +1712,38 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine reestimation_auto_arma(string %sub_eq_name)
-		
-'Determining dependent variable and regressors
+subroutine auto_ardl_reg_series(string %sub_eq_name)
+
 if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
-	{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
+	%regressors = @mid(%command,@instr(%command,") ")+1)
+	%regressors = @replace(%regressors," @","")
+	group gr_{%sub_eq_name}_regs {%regressors}
 endif	
 
 %depvar = gr_{%sub_eq_name}_regs.@seriesname(1)
 
 smpl @all
-series s_depvar = {%depvar}
-
 %regs = gr_{%sub_eq_name}_regs.@members
 %regs = @replace(@upper(%regs),@upper(%depvar),"")
+
+!reg_n = @wcount(%regs)
+
+smpl @all
+series s_depvar = {%depvar}
+
+for !reg = 1 to !reg_n	
+	%reg = @word(%regs,!reg)
+	series s_reg{!reg} = {%reg}
+next
+
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine reestimation_auto_arma(string %sub_eq_name)
+		
+'Determining dependent variable and regressors
+call auto_arma_reg_series(%sub_eq_name)
 
 ' Removing zero-variance regressors 
 if %zerovariance = "t" then
@@ -1769,9 +1774,14 @@ endif
 ' Determining selection criterion
 call arma_auto_select_options(%sub_eq_name)
 
-' Estimating 	
+' Estimating 
 smpl {%tfirst_reestimation} {%tlast_reestimation}
-s_depvar.autoarma(tform=none,diff=0,maxar={sc_maxar},maxma={sc_maxma},maxsar=0,maxsma=0,select={st_auto_info},eqname={%sub_eq_name}_reest) s_depvar_f c {%regs}
+
+if @instr(@upper({%sub_eq_name}.@command)," C ")>0 then
+	s_depvar.autoarma(tform=none,diff=0,maxar={sc_maxar},maxma={sc_maxma},maxsar=0,maxsma=0,select={st_auto_info},eqname={%sub_eq_name}_reest) s_depvar_f c {%regs}
+else
+	s_depvar.autoarma(tform=none,diff=0,maxar={sc_maxar},maxma={sc_maxma},maxsar=0,maxsma=0,select={st_auto_info},eqname={%sub_eq_name}_reest) s_depvar_f {%regs}
+endif
 
 'Replacing dependent variable placeholder with actual dependent variable
 %command={%sub_eq_name}_reest.@command 
@@ -1788,6 +1798,23 @@ copy {%sub_eq_name}_reest {%sub_eq_name}_reest{!fp}
 
 endsub
 
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine auto_arma_reg_series(string %sub_eq_name)
+
+if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
+	{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
+endif	
+
+%depvar = gr_{%sub_eq_name}_regs.@seriesname(1)
+
+smpl @all
+series s_depvar = {%depvar}
+
+%regs = gr_{%sub_eq_name}_regs.@members
+%regs = @replace(@upper(%regs),@upper(%depvar),"")
+
+endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
@@ -1976,16 +2003,16 @@ subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, 
 !sub_forecast_horizons_n = @wcount(%sub_forecast_horizons)
 
 '1 Creating information objects if they do not exist
-if @isobject("st_subsample"+ @str(@wcount(%subsamples)) + "_end")=0 then
-	if @wcount(%subsamples)>0 then
+if @wcount(%subsamples)>0 then
+	if @isobject("st_subsample"+ @str(@wcount(%subsamples)) + "_end")=0 then
 		call SubSamples_info_objects(%subsamples)
-	
-		for !subsample = 1 to sc_subsample_count
-			sc_SubSample{!SubSample}_start = @dtoo(st_subsample{!subsample}_start)-@dtoo(%sub_tfirst)+1
-		next
-	else
-		scalar sc_subsample_count = 0
-	endif
+	endif	
+
+	for !subsample = 1 to sc_subsample_count
+		sc_SubSample{!SubSample}_start = @dtoo(st_subsample{!subsample}_start)-@dtoo(%sub_tfirst)+1
+	next
+else
+	scalar sc_subsample_count = 0
 endif
 
 ' 2. Creating history series
@@ -2165,7 +2192,7 @@ next
 'RMSE
 if @instr(@upper(%sub_performance_metrics),"RMSE")>0 then
 	{%rmse_vector}(!flength_id) = @sqrt(@mean(@epow({%fe_vector},2)))
-	
+
 	for !SubSample = 1 to sc_subsample_count
 		if !flength<=sc_subsample{!subsample}_length then
 			{%rmse_vector_ss{!SubSample}}(!flength_id) = @sqrt(@mean(@epow({%fe_vector_SubSample_{!SubSample}},2))) 
@@ -2381,7 +2408,16 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
+subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast,string %sub_forecast_dep_var)
+
+' 0. Creating history series if it does not exist
+if @isobject("s_history_series")=0 then
+	if @upper(%sub_forecast_dep_var)="T" then
+		series s_history_series = {st_depvar}
+	else
+		series s_history_series = {st_base_var}
+	endif
+endif
 
 ' 1. All forecasts
 
@@ -2724,6 +2760,7 @@ for !flength_id = 1 to sc_bias_horizons_n
 	' 3 Creating forecast bias graph
 	
 	' Creating graph
+	delete(noerr) gp_forecast_bias
 	freeze(gp_forecast_bias) m_forecast_bias.scat linefit()
 	gp_forecast_bias.setelem(1) legend(Forecast)
 	gp_forecast_bias.setelem(2) legend(Actual)
@@ -2742,8 +2779,10 @@ for !flength_id = 1 to sc_bias_horizons_n
 	gp_forecast_bias.addarrow pos(0,3,3,0) startsym(none) endsym(none) pattern(7) linewidth(0.5)
 	
 	' Storing objects
-	rename gp_forecast_bias gp_forecast_bias_h{!flength}
-	rename  m_forecast_bias m_fb_h{!flength}
+	copy(o) gp_forecast_bias gp_forecast_bias_h{!flength}
+	copy(o) m_forecast_bias m_fb_h{!flength}
+	
+	delete(noerr) gp_forecast_bias m_forecast_bias
 
 	%intermediate_objects = %intermediate_objects +  "m_fb_h" + @str(!flength) + " "	
 
@@ -3583,7 +3622,10 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @wcount(st_scenarios)>1 then
 
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%s_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+
+	if @wcount(%s_include_list)>0 then
+		sp_spec_evaluation.comment {%first_graph}  %comment
+	endif
 
 endif
 
@@ -3929,6 +3971,10 @@ endsub
 
 subroutine ardl_eq_varlist_full
 
+if @isobject("gr_"+ st_spec_name + "_regs")=0 then
+	{st_spec_name}.makeregs gr_{st_spec_name}_regs
+endif
+
 %depvar = gr_{st_spec_name}_regs.@seriesname(1)
 
 smpl @all
@@ -4237,19 +4283,6 @@ endsub
 
 subroutine cleaning_up_objects
 
-' 0. Settings values
-if @isobject("sc_forecastp_n") then
-	!sub_forecastp_n = sc_forecastp_n
-else
-	!sub_forecastp_n = sc_forecastp_n_{st_alias}
-endif
-
-if @isobject("st_tfirst_backtest") then
-	%sub_tfirst_backtest = st_tfirst_backtest
-else
-	%sub_tfirst_backtest = st_tfirst_backtest_{st_alias}
-endif
-
 ' 1. Cleaning up intermediate objects
 if @upper(st_keep_objects)="F" then
 	delete(noerr) {%intermediate_objects}
@@ -4257,8 +4290,8 @@ endif
 
 ' 2. Cleaning up forecasts
 if @upper(st_keep_forecasts)="F" then				
-	for !fp = 1 to !sub_forecastp_n
-		%fstart = @otod(@dtoo(%sub_tfirst_backtest)+!fp-1)
+	for !fp = 1 to @obsrange
+		%fstart = @otod(!fp)
 		delete(noerr) {st_base_var}_f{%fstart}
 	next
 
@@ -4271,7 +4304,7 @@ endif
 
 ' 3. Cleaning up equations
 if @upper(st_keep_equations)="F" then				
-	for !fp = 1 to !sub_forecastp_n
+	for !fp = 1 to @obsrange
 		delete(noerr) {st_spec_name}_reest{!fp}
 	next
 endif	
@@ -4315,8 +4348,11 @@ if @upper(st_keep_objects)="F" and sc_spec_count=1 then
 	delete(noerr)   tb_performance_metrics
 endif
 
-delete(noerr) gr_regs gr_{st_spec_name}_regs s_history_series
- 
+delete(noerr) gr_regs s_history_series
+
+if @isobject("st_spec_name") then
+	delete(noerr) gr_{st_spec_name}_regs
+endif 
 
 ' Restoring
 if @upper(%restore_auto_selection)="T" then
@@ -4598,9 +4634,19 @@ endif
 delete(noerr) sp_csf
 spool sp_csf
 
-if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
+if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") or @instr(@upper(st_exec_list),"SCENARIOS_ALL") then
 
-	for %s {st_scenarios} all
+	%scenario_loop_list = ""
+
+	if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
+		%scenario_loop_list = %scenario_loop_list + st_scenarios + "  "
+	endif
+
+	if @instr(@upper(st_exec_list),"SCENARIOS_ALL") then
+		%scenario_loop_list = %scenario_loop_list + "all" + "  "
+	endif
+
+	for %s {%scenario_loop_list}
 		
 		delete(noerr) sp_{%s}
 		spool sp_{%s}
@@ -4648,7 +4694,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
 	%obj_name =  "Individual conditional scenario forecast graphs" 
 	%obj_desc = "- blue with squares = scenario forecast based on given specification \n - orange with dash = original scenario forecast taken from workfile \n - green with dash-dot   = baseline scenario forecast based on given specification \n - other solid = user-included series \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	%first_graph = @word(st_scenarios,1)
+	%first_graph = @word(%scenario_loop_list,1)
 	sp_csf.comment {%first_graph}  %comment
 
 	%obj_name =  "All conditional scenario forecast graphs" 

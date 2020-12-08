@@ -20,12 +20,8 @@ call speceval_user_settings
 
 call include_list
 
-%object_type=_this.@type
-
 %exec_file_name = "speceval_exec.prg"
-
 %exec_file_path  = %add_in_path  + %exec_file_name
-
 exec %exec_file_path
 
 ' ##################################################################################################################
@@ -370,13 +366,21 @@ if !dogui=0 then
 	if @isempty(st_include_growth_rate) then
 		st_include_growth_rate = "f"
 	endif
+
+	if @isempty(st_include_original) then
+		st_include_original = "t"
+	endif
+
+	if @isempty(st_include_baseline) then
+		st_include_original = "t"
+	endif
 	
 	if @isempty(st_keep_objects) then
 		st_keep_objects = "f"
 	endif
 	
 	if @isempty(st_keep_forecasts) then
-		st_keep_forecasts = "t"
+		st_keep_forecasts = "f"
 	endif
 	
 	if @isempty(st_keep_equations) then
@@ -388,7 +392,7 @@ if !dogui=0 then
 	endif
 	
 	if @isempty(st_keep_information) then
-		st_keep_information = "t"
+		st_keep_information = "f"
 	endif	
 	
 	if @isempty(st_use_names) then
@@ -439,20 +443,20 @@ text tx_include_list
 %include_list_path = %add_in_path + "subroutines\include_list.prg"
 
 if @upper(st_custom_reestimation)="T" then
-	%custom_reest_file_path = @runpath + "\custom_reestimation.prg"
+	%custom_reest_file_path = """" + @runpath + "custom_reestimation.prg" + """"
 
 	if @fileexist(%custom_reest_file_path)=0 then 
-		%custom_reest_file_path = @linepath + "subroutines\reestimation_custom.prg"
+		%custom_reest_file_path =  """" +@linepath + "subroutines\custom_reestimation.prg"+ """"
 	endif 
 
 	tx_include_list.append include {%custom_reest_file_path}
 endif
 
 if @wcount(st_scenarios)>0  and @upper(st_scenario_dataload)="T" then
-	%dataload_file_path = @runpath + "\scenario_dataload.prg"
+	%dataload_file_path =  """" + @runpath + "scenario_dataload.prg"+ """"
 
 	if @fileexist(%dataload_file_path)=0 then 
-		%dataload_file_path = @linepath  + "subroutines\scenario_dataload.prg"
+		%dataload_file_path =  """" + @linepath  + "subroutines\scenario_dataload.prg"+ """"
 	endif 
 
 	tx_include_list.append include {%dataload_file_path}

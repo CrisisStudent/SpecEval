@@ -9,19 +9,34 @@ call settings_parameters
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 for !spec_id = 1 to sc_spec_count
-	
+
 	statusline Specification information  ({!spec_id})
 	%intermediate_objects = ""
 	call get_spec_info
 	call get_spec_add_info
 
+	call cleaning_up_objects
 
 	' ##########################################
 	' ##### 2.0 Creating recursive forecasts ###########
 	' ##########################################
 	
-	statusline Recursieve forecasts ({st_spec_name})
-	call recursive_forecasts
+	if @instr(@upper(st_exec_list),"FORECASTS") then
+		statusline Recursieve forecasts ({st_spec_name})
+		call recursive_forecasts
+	else	
+		copy sc_*_{st_alias} sc_*
+		copy st_*_{st_alias} st_*
+		copy {st_base_var}_*_{st_alias} {st_base_var}_*
+
+		if @upper(st_auto_type)="ARDL" then
+			call ardl_auto_reg_series(st_spec_name)
+		endif
+
+		if @upper(st_auto_type)="ARMA" then
+			call arma_auto_reg_series(st_spec_name)
+		endif
+	endif
 	
 	' ####################################################
 	' ##### 3.0 Caluclating forecast perormance metrics ###########
@@ -40,11 +55,12 @@ for !spec_id = 1 to sc_spec_count
 	' ##################################################
 	
 	if @instr(@upper(st_exec_list),"GRAPHS") then
-		statusline Foreacst perforamnce graphs ({st_spec_name})
-		call forecast_graphs(st_base_var, st_spec_name, sc_forecastp_n, st_tfirst_backtest,st_tlast_backtest)
+		statusline Foreacst performance graphs ({st_spec_name})
+		call forecast_graphs(st_base_var, st_spec_name, sc_forecastp_n, st_tfirst_backtest,st_tlast_backtest,st_forecast_dep_var)
 	endif
 
 	if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
+		statusline Foreacst bias graphs ({st_spec_name})
 		call forecast_bias_graphs("s_history_series",st_base_var + "_f{fstart}")
 	endif
 	
