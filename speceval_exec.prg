@@ -30,11 +30,11 @@ for !spec_id = 1 to sc_spec_count
 		copy {st_base_var}_*_{st_alias} {st_base_var}_*
 
 		if @upper(st_auto_type)="ARDL" then
-			call ardl_auto_reg_series(st_spec_name)
+			call auto_ardl_reg_series(st_spec_name)
 		endif
 
 		if @upper(st_auto_type)="ARMA" then
-			call arma_auto_reg_series(st_spec_name)
+			call auto_arma_reg_series(st_spec_name)
 		endif
 	endif
 	

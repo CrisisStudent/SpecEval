@@ -3945,25 +3945,28 @@ if @wcount(%graph_merge_string)>1 then
 	graph gp_coef_stability.merge {%graph_merge_string}
 	gp_coef_stability.align(3,1,1)
 else
-	copy gp_coefs1 gp_coef_stability
+	if @isobject("gp_coefs") then
+		copy gp_coefs1 gp_coef_stability
+	endif
 endif
 
-if @upper(st_use_names)="T" then
-	gp_coef_stability.addtext(t) Coefficient stability graphs for {st_spec_name}
-	gp_coef_stability.setattr("desc") Coefficient stability graphs for {st_spec_name}
-else
-	gp_coef_stability.addtext(t) Coefficient stability graphs for specification {st_alias}
-	gp_coef_stability.setattr("desc") Coefficient stability graphs for specification {st_alias}
-endif
+if @isobject("gp_coef_stability") then
+	if @upper(st_use_names)="T" then
+		gp_coef_stability.addtext(t) Coefficient stability graphs for {st_spec_name}
+		gp_coef_stability.setattr("desc") Coefficient stability graphs for {st_spec_name}
+	else
+		gp_coef_stability.addtext(t) Coefficient stability graphs for specification {st_alias}
+		gp_coef_stability.setattr("desc") Coefficient stability graphs for specification {st_alias}
+	endif
 
-gp_coef_stability.addtext(b) Circles: Recursive coefficient estimates \r Dahsed line: Full sample coefficient \r Blue lines: Confidence interval
+	gp_coef_stability.addtext(b) Circles: Recursive coefficient estimates \r Dahsed line: Full sample coefficient \r Blue lines: Confidence interval
+
+	%intermediate_objects = %intermediate_objects + "gp_coef_stability" + " "
+endif
 
 for !coef = 1 to !coef_n
 	delete(noerr) gp_coefs{!coef}
 next
-
-%intermediate_objects = %intermediate_objects + "gp_coef_stability" + " "
-
 
 endsub
 
