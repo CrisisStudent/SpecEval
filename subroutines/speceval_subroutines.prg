@@ -8,24 +8,86 @@
 '	3) subroutine get_spec_add_info
 
 '	4) subroutine recursive_forecasts
-'		- subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
+'		a) subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
+'			- subroutine regressor_group(string %sub_eq_name)
+'			- subroutine sb_identification(string %sub_tb_name,string %sub_group_name)
+'			- subroutine sb_identification_identity(string %sub_identity_name)
+'			- subroutine sb_create_strings
+'		b) subroutine estimation_boundaries(string %sub_eq_name, string %sub_object_alias)
+'		c) subroutine sample_boundaries_adjust(string %sub_eq_name, string %sub_outofsample,  string %sub_auto_selection, string %sub_object_alias, string %sub_preserve_boundaries)
+'			- subroutine backtest_start_shift(string %sub_obj_name, string %sub_outofsample, string %sub_auto_selection, string %sub_object_alias)
+'			- subroutine ardl_auto_select_options(string %sub_eq_name, string %sub_object_alias)
+'			- subroutine arma_auto_select_options(string %sub_eq_name)
+'			- subroutine var_auto_select_options(string %sub_eq_name)
+'		d) subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var)
+'		e) subroutine reestimation(string %sub_eq_name, string %sub_auto_selection)
+'			- subroutine reestimation_parameters(string %sub_eq_name)
+'			- subroutine zerovariance_identification(string %sub_series_list, string %sub_tfirst, string %sub_tlast, string %sub_indicator_name)
+'			- subroutine perfect_corr_identification(string %sub_series_list, string %sub_tfirst, string %sub_tlast, string %sub_indicator_name)
+'			- subroutine reestimating(string %sub_eq_name)
+'			- subroutine reestimating_auto(string %sub_eq_name)
+'			- subroutine reestimation_auto_ardl(string %sub_eq_name, string %sub_use_existing_table)
+'			- subroutine auto_ardl_reg_series(string %sub_eq_name)
+'			- subroutine reestimation_auto_arma(string %sub_eq_name)
+'			- subroutine auto_arma_reg_series(string %sub_eq_name)
+'			- subroutine reestimation_auto_var(string %sub_var_name)
+'		f) subroutine create_forecast_number_tb
+'		g) subroutine update_forecast_model(string %sub_eq_name, string %sub_cf_model_name)
+'		h) subroutine creating_forecasts(string %sub_cf_model_name,string %sub_fstart,string %sub_fend, string %sub_EqVar, string %sub_forecast_dep_var)
+'		i) subroutine subsample_ident
 
 '	5) subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
+'		a) subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_forecast_horizons)
+'		b) subroutine performance_vectors(string %sub_vector_name_prefix, string %sub_performance_metrics, string %sub_include_growth_rate)
+'		c) subroutine fe_vectors(string %sub_vector_name_prefix, scalar !sub_forecastp_n, string %sub_tlast, scalar !sub_flength, string %sub_include_growth_rate)
+'		d) subroutine performance_calculation(string %sub_EqVar, string %sub_history_series, string %sub_master_mnemonic, string %sub_tfirst, scalar !sub_forecastp_n, string %sub_performance_metrics, string %sub_include_growth_rate)
+'		e) subroutine forecast_error_calculation(string %sub_history_series, string %sub_forecast_series, string %sub_fend, string %sub_percentage_error, string %sub_vector,scalar !sub_position)
+'		f) subroutine metrics_table(string %sub_performance_metrics, string %sub_forecast_horizons)
+'			- subroutine get_formated_value(scalar !sub_value,string %sub_string_name)
 
 '	6) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
-' 		- subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
+'		a) subroutine foreast_graphs_sample(string %sub_tfirst, string %sub_tlast)
+' 		b) subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
+'			- subroutine forecasts_add(string %sub_history_series, string %sub_master_mnemonic,scalar !sub_horizon,   string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_spread_benchmark, string %sub_index_period, string %sub_forecasted_ivariables)
+'		c) subroutine graphs_SubSample(string %sub_history_series, string %sub_master_mnemonic, string %sub_spread_benchmark)
+
 
 '	7) subroutine forecast_bias_graphs(string %sub_history_series,string %sub_master_mnemonic)
 
 '	8) subroutine conditional_scenario_forecast
+' 		a) subroutine missing_scen_variables
+'		b) subroutine csf_forecasting(string %sub_salias_source, string %sub_salias, string %sub_scenario_name, string %sub_model_name)
+'		c) subroutine csf_graphsstring %sub_include_original, string %sub_include_add, string %sub_transformation)
+'			- subroutine csf_graph_group(string %sub_include_original, string %sub_add_scenarios, string %sub_add_series)
+'			- subroutine csf_graphs_create(string %sub_trasnformation)
+'			- subroutine csf_graphs_legend(string %sub_include_original, string %sub_add_scenarios, string %sub_transformation)
+'		d) subroutine csf_all_scenario_graphs(string %sub_scenario_forecast, string %sub_transformation)
 
 '	9) subroutine evaluation_report
+'		a) subroutine comment_string(string %sub_title, string %sub_desc,string %sub_include_eq_info ,string %sub_use_names,string %sub_include_desc)
+'		b) subroutine regression_output_adjusted(string %sub_equation_name)
+'		c) subroutine standardized_coefs_manual(string %sub_equation_name)
+'		d) subroutine coefficient_stability
+'			- subroutine coefficient_stability_series(string %sub_varlist)
+'			- subroutine coefficient_stability_graph(string %sub_include_fs)
+'			- subroutine ardl_eq_varlist_full
+'			- subroutine arma_eq_varlist_full
+'		e) subroutine auto_orders
+'			- subroutine ardl_order_graph
+'			- subroutine arma_order_graph
 
-'	10) subroutine results_aliasing(st_alias)
+
+'	10) subroutine results_aliasing(string %sub_alias)
 
 '	11) subroutine cleaning_up_objects
 
 '	12) subroutine evaluation_multireport
+'		a) subroutine insert_specs(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
+'		b) subroutine insert_spec(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
+'		c) subroutine performance_tables_multi	(string %sub_metric, scalar !sub_source_row, string %sub_table_name)
+'		d) subroutine colorcode(string %sub_tbname, string %sub_rows, string %sub_cols,string %sub_colors, scalar !sub_scales_n, string %sub_by_type,string %sub_absolute_value) 
+'		e) subroutine colorcode_execution(string %sub_tbname, string %sub_rlist,string %sub_clist, string %sub_absolute_value)
+'		f) subroutine scen_graph_multispec(st_use_names)
 
 '	13) subroutine speceval_store
 
@@ -38,13 +100,14 @@ subroutine settings_parameters
 
 ' 1. Execution settings
 
-' Component lists
-%graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
-%scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS"
-
 %full_component_list = " FORECASTS METRICS GRAPHS SCENARIOS DECOMPOSITION REG_OUTPUT STABILITY "
 
+%graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
+%scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS SCENARIOS_MULTISPEC"
+
 %multiple_components_list = "ALL SHORT MEDIUM LONG"
+
+%complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %multiple_components_list
 
 ' Default 
 string st_exec_list = ""
@@ -58,18 +121,18 @@ endif
 if @isempty(st_exec_list_user)=0 then
 	for %c {st_exec_list_user}
 		if @left(%c,1)<>"-" then
-			if @instr(" "+ @upper(%full_component_list) + " "," " +@upper(%c) + " ")>0 or @instr(" " + @upper(%multiple_components_list)+ " "," " +@upper(%c) + " ")>0 then   
+			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
 				st_exec_list = st_exec_list + %c + " "
 			endif
 		else
 			%c = @mid(%c,2)
 		
-			if @instr(@upper(%full_component_list)," " +@upper(%c) + " ")>0 or @instr(@upper(%multiple_components_list)," " +@upper(%c) + " ")>0 then   
+			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
 				%remove_list = %remove_list + %c + " "
 			endif
 		endif
 	next
-endif
+endif	
 
 ' Dealing with length options
 if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
@@ -386,6 +449,14 @@ else
 	
 	%baseline_alias = @word(st_scenarios,1)
 
+	if @upper(st_include_original)="T" then
+		for %s {st_scenarios}
+			if @isobject(st_base_var + "_"+ %s)=0 then
+				series {st_base_var}_{%s} = na
+			endif
+		next
+	endif
+
 endif
 
 endsub
@@ -463,7 +534,7 @@ else
 endif
 
 ' Underlying dependent variable
-if {st_spec_name}.@type="EQUATION" or {st_spec_name}.@type="STRING" then
+if {st_spec_name}.@type="EQUATION" or {st_spec_name}.@type="STRING" or @isempty(st_base_var) then
 	call  base_var_ident(st_spec_name)
 endif
 
@@ -750,7 +821,7 @@ if {%sub_eq_name}.@type<>"STRING" then
 
 	' 1. Creating regressor group 
 	call regressor_group(%sub_eq_name)
-	
+
 	' 2. Identifying smaple boundaries
 	call sb_identification("tb_sb_" + %sub_eq_name,"gr_"+ %sub_eq_name+ "_regs" )
 
@@ -800,10 +871,13 @@ if {%sub_eq_name}.@type="VAR" then
 		%endog_vars = gr_{%sub_eq_name}_regs.@members
 	
 		%command = {%sub_eq_name}.@command
-		%exog_vars = @mid(%command,@instr(%command," @ ")+2)
-		%exog_vars = @replace(" "+ %exog_vars + " "," C ","")
+
+		if @instr(%command," @  ")>0 then
+			%exog_vars = @mid(%command,@instr(%command," @ ")+2)
+			%exog_vars = @replace(" "+ %exog_vars + " "," C ","")
 	
-		gr_{%sub_eq_name}_regs.add {%exog_vars}
+			gr_{%sub_eq_name}_regs.add {%exog_vars}
+		endif
 	endif
 endif
 
@@ -1211,6 +1285,10 @@ if @isempty(st_auto_info) then
 	st_auto_info = "LR"
 endif
 
+if @upper(st_auto_info)="SIC" then
+	st_auto_info = "SC"
+endif
+
 if @isna(sc_maxlag) then
 	sc_maxlag = 4
 endif
@@ -1246,22 +1324,6 @@ for !add_eq = 1 to sc_add_eq_count
 		{%sub_cf_model_name}.append %identity_string
 	endif
 next
-
-endsub
-
-' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-subroutine reestimation_parameters(string %sub_eq_name)
-
-%est_command	 = 	{%sub_eq_name}.@command 
-
-if @isempty(%tfirst_estimation)  then
-	%tfirst_reestimation = @otod(1)
-else
-	%tfirst_reestimation = %tfirst_estimation
-endif
-
-%tlast_reestimation = @otod(@dtoo(%fstart)-1)
 
 endsub
 
@@ -1319,6 +1381,23 @@ else
 	' Performing custom reestimation
 	call reestimation_custom(%tfirst_reestimation,  %tlast_reestimation)			
 endif	
+
+endsub
+
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine reestimation_parameters(string %sub_eq_name)
+
+%est_command	 = 	{%sub_eq_name}.@command 
+
+if @isempty(%tfirst_estimation)  then
+	%tfirst_reestimation = @otod(1)
+else
+	%tfirst_reestimation = %tfirst_estimation
+endif
+
+%tlast_reestimation = @otod(@dtoo(%fstart)-1)
 
 endsub
 
@@ -1833,9 +1912,9 @@ for !reg = 1 to gr_{%sub_var_name}_regs.@count
 	endif
 next
 
-
 %regs_original = gr_{%sub_var_name}_regs.@members
-%regs = @replace(@upper(%regs_original),@upper(%base_var_depvar ),"")
+%regs_full = @replace(@upper(%regs_original),@upper(%base_var_depvar ),"")
+%regs = %regs_full
 
 ' Removing zero-variance regressors 
 if %zerovariance = "t" then
@@ -1865,7 +1944,7 @@ endif
 
 'Estimating initial var
 %est_command_reest = "LS 1 2 " + @mid(@upper(%est_command),@instr(@upper(%est_command),@upper(gr_{%sub_var_name}_regs.@seriesname(1))))
-%est_command_reest = @replace(@upper(%est_command_reest),@upper(%regs_original),@upper(%regs))
+%est_command_reest = @replace(@upper(%est_command_reest),@upper(%regs_full),@upper(%regs))
 
 smpl {%tfirst_reestimation} {%tlast_reestimation}
 var {%sub_var_name}_reest.{%est_command_reest} 
@@ -1885,7 +1964,40 @@ for !info = 1 to 5
 	endif
 next
 
+' Estimating 
 %est_command_reest = @replace(%est_command_reest,"1 2","1 "+ @str(sc_laglength))
+
+smpl {%tfirst_reestimation} {%tlast_reestimation}
+var {%sub_var_name}_reest.{%est_command_reest}
+
+' Checking for stability
+if  @instr(@upper({%sub_var_name}.@attr("selection_info")),"STABILITY") then
+
+	freeze(tb_ar_roots) {%sub_var_name}_reest.arroots
+	
+	if @val(tb_ar_roots(9,2))>1 then 
+		!stability_found = 0
+		while !stability_found = 0 and sc_laglength>1
+			sc_laglength = sc_laglength-1		 	
+			%est_command_reest = @replace(%est_command_reest,"1 " + @str(sc_laglength+1),"1 "+ @str(sc_laglength))
+			
+			var {%sub_var_name}_reest.{%est_command_reest}
+	
+			delete(noerr) tb_ar_roots
+			freeze(tb_ar_roots) {%sub_var_name}_reest.arroots
+	
+			if @val(tb_ar_roots(9,2))<1 then 
+			 	!stability_found = 1
+			endif
+		wend
+	endif
+	
+	delete(noerr) tb_ar_roots
+
+endif
+
+' Storing 
+copy {%sub_var_name}_reest {%sub_var_name}_reest{!fp}
 
 if @isobject("sp_var_model_selection")=0 then 
 	series s_laglength = na
@@ -1898,13 +2010,6 @@ smpl  {%tlast_reestimation}  {%tlast_reestimation}
 s_laglength = sc_laglength
 
 delete(noerr) tb_laglength v_laglength sc_laglength
-
-' Estimating 
-smpl {%tfirst_reestimation} {%tlast_reestimation}
-var {%sub_var_name}_reest.{%est_command_reest}
-
-' Storing 
-copy {%sub_var_name}_reest {%sub_var_name}_reest{!fp}
 
 endsub
 
@@ -2560,7 +2665,7 @@ gp_forecasts_all.legend -display
 gp_forecasts_all.addtext(t) Conditional forecasts - {!sub_horizon} step ahead
 gp_forecasts_all.setelem(1) symbol(7) legend("Actuals")
 
-if @isempty(%sub_graph_add)=0 then
+if @wcount(%sub_graph_add)>0 then
 
 	gp_forecasts_all.legend +display position(r)
 
@@ -2584,7 +2689,11 @@ endif
 !e_count = 1+@wcount(%sub_graph_add)
 for !f = 1 to gr_forecasts_all.@count-1-@wcount(%sub_graph_add)
 	!e_count = !e_count +1
-	gp_forecasts_all.setelem(!e_count)  legend("") linepattern(dash6) linewidth(1)
+	if @wcount(%sub_graph_add)>0 then
+		gp_forecasts_all.setelem(!e_count)  legend("") linepattern(dash6) linewidth(1)
+	else
+		gp_forecasts_all.setelem(!e_count) linepattern(dash6) linewidth(1)
+	endif
 next
 
 gp_forecasts_all.options +linepat
@@ -2596,7 +2705,6 @@ endif
 if @upper(%sub_transformation)="GROWTH" or @upper(%sub_transformation)="SPREAD" then
 	gp_forecasts_all.draw(left,line) 0 0
 endif
-
 
 ' 6. Cleaning up
 
@@ -2867,13 +2975,13 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
 			%add_scenarios = @replace(@upper(%add_scenarios),@upper(%scenario),"")
 		endif
 
-		call shock_graphs(st_include_original,%add_scenarios,%sub_transformation)
+		call csf_graphs(st_include_original,%add_scenarios,%sub_transformation)
 	next
 endif
 
 ' 7.3 Creating all scenario graphs
 if @instr(@upper(st_exec_list),"SCENARIOS_ALL") then
-	call all_scenario_graphs(st_base_var+ "_csf" +"{S}",st_transformation)
+	call csf_all_scenario_graphs(st_base_var+ "_csf" +"{S}",st_transformation)
 endif
 
 ' 8. Scenario forecast drivers
@@ -3007,7 +3115,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine shock_graphs(string %sub_include_original, string %sub_include_add, string %sub_transformation)
+subroutine csf_graphs(string %sub_include_original, string %sub_include_add, string %sub_transformation)
 
 ' 1. Creating list of comparison variables
 call csf_graph_group(%sub_include_original,%sub_include_add,st_graph_add_scenarios)
@@ -3263,7 +3371,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine all_scenario_graphs(string %sub_scenario_forecast, string %sub_transformation)
+subroutine csf_all_scenario_graphs(string %sub_scenario_forecast, string %sub_transformation)
 
 ' 1. Level graphs
 
@@ -3321,7 +3429,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 		for %scenario {%model_baseline_alias} {st_scenarios}
 			%gs = @replace(@upper(%sub_scenario_forecast),"{S}",%scenario)
 	
-			st_spread_benchmark_scen = st_spread_benchmark + "_" + %scenario
+			string st_spread_benchmark_scen = st_spread_benchmark + "_" + %scenario
 	
 			%graph_string = %graph_string +" " + %gs + "-" + st_spread_benchmark_scen
 		next
@@ -3740,6 +3848,100 @@ for !reg = 1 to {%sub_equation_name}.@ncoef
 next
 
 tb_reg_output.setwidth(1) !max_length
+
+
+' 6. Inputing varaible descriptions
+
+' Headings
+!last_row = tb_reg_output.@rows
+!heading_row = !last_row+1
+
+tb_reg_output(!heading_row,1) = "Variable" 
+tb_reg_output(!heading_row,2) = "Description" 
+
+!next_row = !heading_row+1
+tb_reg_output.setlines(!next_row,1,!next_row,6) +d
+
+' Variable list
+'	%sub_eq_spec = {%sub_equation_name}.@spec
+'
+'	for %evar {%sub_eq_spec}
+'		if @instr(@upper(%evar)," AR(")>0 then
+'			%sub_eq_spec = @replace(@upper(%sub_eq_spec),@upper(%evar)," ")
+'		endif 
+'
+'		if @instr(@upper(%evar)," MA(")>0 then
+'			%sub_eq_spec = @replace(@upper(%sub_eq_spec),@upper(%evar)," ")
+'		endif 
+'
+'		if @instr(@upper(%evar)," PDL(")>0 then
+'			%sub_eq_spec = @replace(@upper(%sub_eq_spec)," PDL"," ")
+'		endif 		
+'	next
+
+delete(noerr) gr_regs
+{%sub_equation_name}.makeregs gr_regs		
+
+if @instr(gr_regs.@members,"PDL01") then
+	for !pdl_order = 1 to 99
+		if !pdl_order<10 then
+			gr_regs.drop pdl0{!pdl_order}
+		else
+			gr_regs.drop pdl{!pdl_order}
+		endif
+	next
+
+'%sub_eq_spec = {%sub_equation_name}.@spec		
+'
+'for %reg {%sub_eq_spec}
+'	if @instr(@upper(%reg)," PDL(")>0 then
+'		%pdl_reg = @replace(@upper(%reg)," PDL("," (")
+'	next
+'
+'	gr_regs.add 
+'next
+
+endif
+
+%eq_variables = @wunique(gr_regs.@depends)
+delete(noerr) gr_eq_vars
+
+' Inputting descriptions
+for !evar = 1 to @wcount(%eq_variables)
+	%evar = @word(%eq_variables,!evar)
+	
+	tb_reg_output(!heading_row+1+!evar,1) = %evar	
+
+	if @isobject("tb_variable_descriptions") then	
+		for !dr = 1 to tb_variable_descriptions.@rows
+			if @upper(tb_variable_descriptions(!dr,1))=@upper(%evar) then
+				%var_desc = tb_variable_descriptions(!dr,2)
+			endif
+		next
+	else
+		%var_desc = {%evar}.@attr("description")
+	endif
+
+	tb_reg_output(!heading_row+1+!evar,2) = %var_desc	
+
+next	
+
+!next_row = tb_reg_output.@rows+1
+tb_reg_output.setlines(!next_row,1,!next_row,6) +d
+
+
+' Deleteing if no description was inserted
+!description_inserted = 0
+for !evar = 1 to @wcount(%eq_variables)
+	if @isempty(tb_reg_output(!heading_row+1+!evar,2))=0 then
+		!description_inserted = 1
+	endif
+next 
+
+if !description_inserted = 0 then
+	!row_delete_n =  @wcount(%eq_variables)+1
+	tb_reg_output.deleterow(!heading_row) !row_delete_n
+endif
 
 endsub
 
@@ -4241,12 +4443,12 @@ if @upper(st_keep_forecasts)="T" then
 		%fstart = @otod(@dtoo(st_tfirst_backtest)+!fp-1)
 		%object_list = %object_list +" " +st_base_var + "_f" + %fstart
 	next
+endif
 
-	if @isempty(st_scenarios)=0 then
-		for %s {st_scenarios}
-			%object_list = %object_list +" "  + st_base_var + "_csf" + %s
-		next
-	endif
+if (@upper(st_keep_forecasts)="T" or @instr(@upper(st_exec_list),"SCENARIOS_MULTISPEC")>0) and @isempty(st_scenarios)=0  then
+	for %s {st_scenarios}
+		%object_list = %object_list +" "  + st_base_var + "_csf" + %s
+	next
 endif
 
 if @upper(st_keep_information)="T" then
@@ -4312,7 +4514,6 @@ if @upper(st_keep_equations)="F" then
 	next
 endif	
 
-
 ' 3. Cleaning up process information objects
 if @upper(st_keep_information)="F" then
 	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{st_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
@@ -4323,9 +4524,9 @@ if @upper(st_keep_information)="F" then
 		next
 	endif
 	
-	if  !spec_id=sc_spec_count then
-		delete(noerr) st_percentage_error
-	endif
+'	if  !spec_id=sc_spec_count then
+'		delete(noerr) st_percentage_error
+'	endif
 endif
 
 ' 4. Cleaning up other objects
@@ -4695,7 +4896,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") or @instr(@upper(st_exec_
 	next
 
 	%obj_name =  "Individual conditional scenario forecast graphs" 
-	%obj_desc = "- blue with squares = scenario forecast based on given specification \n - orange with dash = original scenario forecast taken from workfile \n - green with dash-dot   = baseline scenario forecast based on given specification \n - other solid = user-included series \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
+	%obj_desc = "- blue with squares = scenario forecast based on given specification \n - orange with dash = original scenario forecas \n - green with dash-dot   = baseline scenario forecast based on given specification \n - other solid = user-included series \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%scenario_loop_list,1)
 	sp_csf.comment {%first_graph}  %comment
@@ -4777,6 +4978,21 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @instr(@upper(st_exec_list),
 
 	delete(noerr) sp_decomposition 
 
+endif
+
+' 2.6 Multiple specification scenario graphs
+
+if  @instr(@upper(st_exec_list),"SCENARIOS_MULTISPEC") then
+	call scen_graph_multispec(st_include_baseline,st_include_original,st_transformation,st_use_names)
+
+	sp_spec_evaluation.insert(name=conditional_scenarios_ms)  sp_csfmsgraphs
+	delete(noerr) sp_csfmsgraphs
+	
+	%obj_name =  "Conditional scenario forecast graphs - Multiple specifications" 
+	%obj_desc = "- blue with circles = Original baseline scenario forecast  \n - orange with squares = original scenario forecast  \n - other dashed = Individual specification models scenario forecasts \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
+	call comment_string(%obj_name,%obj_desc,"f",st_use_names,st_include_descriptions)
+
+	sp_spec_evaluation.comment conditional_scenarios_ms %comment
 endif
 
 
@@ -5129,6 +5345,220 @@ for %sub_tr {%sub_rlist}
 		next
 	next
 next
+
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine scen_graph_multispec(string %sub_include_baseline, string %sub_include_original, string %sub_transformation, string %sub_use_names)
+
+delete(noerr) sp_csfmsgraphs
+spool sp_csfmsgraphs
+
+' Create group with all_forecasts
+if @wcount(st_scenarios)>0 then
+	for %s {st_scenarios}
+		group gr_csf{%s} 
+
+		for !spec_id = 1 to sc_spec_count
+			call spec_alias
+			gr_csf{%s}.add {st_base_var}_csf{%s}_{st_alias}
+		next 
+	next
+endif
+
+' Set maximum number of specifications in one graph
+if sc_spec_count<50 then
+	!maxmembers = 5
+else
+	!maxmembers = 10
+endif
+
+if @wcount(st_scenarios)>0 then
+	for %s {st_scenarios}
+
+		delete(noerr) sp_csfmsgraphs_{%s}
+		spool sp_csfmsgraphs_{%s}
+
+		!member_count = 0
+		while !member_count<sc_spec_count		
+
+			' Create graphs
+			call mssg_create_graphs(st_base_var,%s,%sub_include_baseline,%sub_include_original,%sub_transformation, %sub_use_names)
+
+			' Add to spool
+			!spec_id = !member_count+1
+			call spec_alias
+			%first_specification = st_alias
+			if !member_count+!maxmembers-1 < sc_spec_count then
+				!spec_id = !member_count+!maxmembers
+				call spec_alias
+				%last_specification = st_alias
+			else
+				%last_specification = @str(sc_spec_count)
+			endif
+			
+			gp_csf_mslevel_{%s}.addtext(t) Conditional {%scenario}  forecast - Specification {%first_specification} to {%last_specification} (Level)
+			sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}) gp_csf_mslevel_{%s}
+			delete gp_csf_mslevel_{%s}
+
+			if @isobject("gp_csf_mstrans_" + %s) then
+
+				gp_csf_mstrans_{%s}.addtext(t) Conditional {%scenario}  forecast  - Specification {%first_specification} to {%last_specification} ({%trans_description})
+				sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}_trans) gp_csf_mstrans_{%s}
+				delete gp_csf_mstrans_{%s}
+			endif
+			
+			' 5. Proceedinf to next batch of specifications
+			!member_count  = !member_count + !maxmembers
+
+		wend 
+
+		sp_csfmsgraphs.insert(name={%s}) sp_csfmsgraphs_{%s}
+		delete(noerr) sp_csfmsgraphs_{%s}
+	next
+endif
+
+	
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine mssg_create_graphs(string %sub_var,string %sub_scenario,string %sub_include_baseline, string %sub_include_original,string %sub_transformation, string %sub_use_names) 
+
+' 1. Creating string with names of specifications for given graph
+call mssg_graph_members(%sub_var,%sub_scenario)
+
+' 2. Creating level graph
+delete(noerr) gp_csf_mslevel_{%s}
+smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+graph gp_csf_mslevel_{%s}.line  {%graph_members}
+
+call mssg_graph_format("gp_csf_mslevel_" + %s, %sub_include_baseline,%sub_include_original,%sub_use_names)
+
+' 3. Creating transformation graph
+
+%graph_string_trans = ""
+
+for !gm = 1 to @wcount(%graph_members)
+	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"DEVIATION" then
+		if @upper(st_percentage_error)="T" then
+			%trans_description = "Growth rate"
+			%graph_string_trans = %graph_string_trans + "@pca(" + @word(%graph_members,!gm) +  ")"  + " "
+		else
+			%trans_description = "Differences"
+			%graph_string_trans = %graph_string_trans + "@d(" + @word(%graph_members,!gm) +  ")"  + " "
+		endif
+	endif
+
+	if @upper(%sub_transformation)="SPREAD"  then
+		%trans_description = "Spread from " + st_spread_benchmark
+		%spread_benchmark_scen = st_spread_benchmark + "_" + %sub_scenario
+		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "-" + %spread_benchmark_scen  + " "
+	endif
+
+	if @upper(%sub_transformation)="DEVIATION" and (@upper(%sub_scenario)=@upper(%baseline_alias))=0 and (@upper(st_include_baseline)="T" and !gm=1)=0 then
+
+		%gs = @word(%graph_members,!gm) 
+		%gs_baseline = @replace(@upper(%gs),@upper(%sub_scenario),%baseline_alias) 
+
+		if @upper(st_percentage_error)="T" then
+			%trans_description = "Deviation from baseline"
+			%graph_string_trans = %graph_string_trans + "(" + %gs+ "/" +%gs_baseline + "-1" + ")*100" + " "
+		else
+			%trans_description = "Difference from baseline"
+			%graph_string_trans = %graph_string_trans +%gs  + "-" + %gs_baseline + " "
+		endif
+	endif
+next
+
+if @isempty(%graph_string_trans)=0 then
+	delete(noerr) gp_csf_mstrans_{%s}
+	smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+	graph gp_csf_mstrans_{%s}.line  {%graph_string_trans}
+	
+	if @upper(%sub_transformation)="DEVIATION"  then
+		call mssg_graph_format("gp_csf_mstrans_" + %s,"f",%sub_include_original,%sub_use_names)
+	else
+		call mssg_graph_format("gp_csf_mstrans_" + %s,%sub_include_baseline,%sub_include_original,%sub_use_names)
+	endif
+endif
+
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine mssg_graph_members(string %sub_var,string %sub_scenario)
+
+%graph_members = ""
+
+' Default forecasts
+if @upper(st_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
+	%graph_members = %graph_members + %sub_var + "_" + @word(st_scenarios,1) + " " 
+endif
+
+if @upper(st_include_original)="T" then
+	%graph_members = %graph_members + %sub_var + "_" + %sub_scenario + " " 
+endif
+
+' checking number of left specifications
+if !maxmembers < sc_spec_count-!member_count then
+	!members = !maxmembers
+else
+	!members = sc_spec_count-!member_count
+endif
+
+' New specification forecasts
+for !member = 1 to !members
+	%graph_members = %graph_members + gr_csf{%s}.@seriesname(!member_count+!member) + " " 
+next
+
+
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine mssg_graph_format(string %sub_graph_name, string %sub_include_baseline, string %sub_include_original,string %sub_use_names)
+
+' Legend and line patterns
+{%sub_graph_name}.legend position(r)
+
+!elem = 0
+
+if @upper(%sub_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
+	!elem = !elem + 1
+	{%sub_graph_name}.setelem(!elem) legend(Original baseline forecast) symbol(filledcircle) symbolsize(S) linepattern(solid) linecolor(blue)
+endif
+
+if @upper(%sub_include_original)="T" then
+	!elem = !elem + 1
+	{%sub_graph_name}.setelem(!elem)  legend(Original scenario forecast) symbol(filledsquare) symbolsize(S) linepattern(solid) linecolor(orange)
+endif
+
+for !spec_id =!member_count+1 to !member_count+!maxmembers
+	!elem = !elem + 1
+
+	if @upper(%sub_use_names)="T" then
+		%legend = @word(st_specification_list,!spec_id)
+	else
+		call spec_alias
+		%legend = "Specification " + st_alias
+	endif
+
+	!pattern = 1+!spec_id-!member_count
+
+	{%sub_graph_name}.setelem(!elem) legend({%legend})   linepattern({!pattern}) ' symbol(!pat) symbolsize(xs)' linepattern(!pat)
+
+next
+
+
+' Shade
+if @isempty(st_tfirst_scenarios)=0 then
+	%shade_end = @otod(@dtoo(st_tfirst_scenarios)-1)
+	{%sub_graph_name}.draw(shade,bottom,color(219,219,219)) @first {%shade_end}
+endif
+
+{%sub_graph_name}.options +linepat
 
 endsub
 	
