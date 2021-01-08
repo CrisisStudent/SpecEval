@@ -236,7 +236,7 @@ if !dogui=1 then
 		"check",!keep_equations,"Do you want to keep reestiamted  equations?", _
 		"check",!keep_information,"Do you want to keep information objects?", _
 		"check",!keep_settings,"Do you want to keep setting objects?", _
-		"radio",!save_output,"Save output","Yes ""Yes - with ttiles"" ""Yes - with descriptions"" ""User dialog"" No")
+		"radio",!save_output,"Save output","Yes""Yes - with descriptions"" ""User dialog"" No")
 
 		if !result = -1 then 'will stop the program unless OK is selected in GUI
 			stop
@@ -252,11 +252,16 @@ if !dogui=1 then
 		endif				
 	next
 
-	string st_save_output = @word("t t d user f",!save_output)
+	string st_save_output = @word("t d user f",!save_output)
+
+	if @upper(st_save_output)="D" or @upper(st_save_output)="USER" then
+		string st_include_descriptions = "t"
+	else
+		string st_include_descriptions = "f"
+	endif
 endif
 
 ' 3. Extract execution options
-'AAA
 if !dogui=0 then
 
 	' Main options
@@ -403,10 +408,10 @@ if !dogui=0 then
 		st_save_output = "f"
 	endif
 
-	if @upper(st_save_output)="D" then
+	if @upper(st_save_output)="D" or @upper(st_save_output)="USER" then
 		string st_include_descriptions = "t"
 	else
-		string st_include_descriptions = "t"
+		string st_include_descriptions = "f"
 	endif
 	
 	if @isempty(st_auto_selection) then

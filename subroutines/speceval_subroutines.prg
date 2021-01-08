@@ -105,7 +105,7 @@ subroutine settings_parameters
 %graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
 %scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS SCENARIOS_MULTISPEC"
 
-%multiple_components_list = "ALL SHORT MEDIUM LONG"
+%multiple_components_list = "ALL SHORT MEDIUM LONG REPORT"
 
 %complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %multiple_components_list
 
@@ -164,7 +164,13 @@ if @instr(" " + @upper(st_exec_list) + " "," LONG ") then
 	if @isempty(st_performance_metrics) then
 		st_performance_metrics = "rmse mae bias"
 	endif
+endif
 
+if @instr(" " + @upper(st_exec_list) + " "," REPORT ") then
+	st_exec_list = @replace(@upper(st_exec_list),"REPORT","REG_OUTPUT FORECASTS METRICS GRAPHS_SUMMARY SCENARIOS_MULTISPEC")
+
+	st_save_output = "t"
+	st_include_descriptions = "t"
 endif
 
 'Dealing with all option
@@ -4632,18 +4638,18 @@ if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
 	delete(noerr) sp_lag_orders
 	spool sp_lag_orders
 	call insert_specs("sp_lag_orders","gp_lag_orders", st_use_names)
+
+
+	if sp_lag_orders.@count>0 then
+		sp_spec_evaluation.insert(name=lag_orders) sp_lag_orders
+		delete(noerr) sp_lag_orders
 	
-	sp_spec_evaluation.insert(name=lag_orders) sp_lag_orders
-	delete(noerr) sp_lag_orders
-
-	%obj_name =  "Automatically selected lag orders" 
-	%obj_desc = "- Automatically selected number of lags (of autoregressive and moving average components for ARMA models; of dependent and independet variables for ARDL models)" 
-	call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
- 	sp_spec_evaluation.comment lag_orders %comment
-
+		%obj_name =  "Automatically selected lag orders" 
+		%obj_desc = "- Automatically selected number of lags (of autoregressive and moving average components for ARMA models; of dependent and independet variables for ARDL models)" 
+		call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
+ 		sp_spec_evaluation.comment lag_orders %comment
+	endif
 endif
-
-
 
 ' 2.3 Forecast performance metrics
 
@@ -4989,7 +4995,7 @@ if  @instr(@upper(st_exec_list),"SCENARIOS_MULTISPEC") then
 	delete(noerr) sp_csfmsgraphs
 	
 	%obj_name =  "Conditional scenario forecast graphs - Multiple specifications" 
-	%obj_desc = "- blue with circles = Original baseline scenario forecast  \n - orange with squares = original scenario forecast  \n - other dashed = Individual specification models scenario forecasts \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
+	%obj_desc = "- blue with circles = Original baseline scenario forecast  \n - orange with squares = original scenario forecast  \n - other dashed = Individual specifications model scenario forecasts \n - (model forecast = forecast based on given specification and values of RHS variables without add-factors; original forecast = scenario forecast taken from workfile)"  
 	call comment_string(%obj_name,%obj_desc,"f",st_use_names,st_include_descriptions)
 
 	sp_spec_evaluation.comment conditional_scenarios_ms %comment
@@ -5430,9 +5436,12 @@ subroutine mssg_create_graphs(string %sub_var,string %sub_scenario,string %sub_i
 call mssg_graph_members(%sub_var,%sub_scenario)
 
 ' 2. Creating level graph
+
+%graph_string_level = %graph_members
+
 delete(noerr) gp_csf_mslevel_{%s}
 smpl {st_tfirst_sgraph} {st_tlast_scenarios}
-graph gp_csf_mslevel_{%s}.line  {%graph_members}
+graph gp_csf_mslevel_{%s}.line  {%graph_string_level}
 
 call mssg_graph_format("gp_csf_mslevel_" + %s, %sub_include_baseline,%sub_include_original,%sub_use_names)
 
@@ -5550,7 +5559,6 @@ for !spec_id =!member_count+1 to !member_count+!maxmembers
 	{%sub_graph_name}.setelem(!elem) legend({%legend})   linepattern({!pattern}) ' symbol(!pat) symbolsize(xs)' linepattern(!pat)
 
 next
-
 
 ' Shade
 if @isempty(st_tfirst_scenarios)=0 then
