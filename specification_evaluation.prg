@@ -155,7 +155,7 @@ if !dogui=1 then
 		"text","=========================", _
 		"text","", _
 		"text","PERFORMANCE GRAPH OPTIONS", _	
-		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Logarithm Index ""Deviation from baseline""", _
+		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Index ""Deviation from baseline""", _
 		"edit",st_graph_benchmark,"Enter name of series you wish to use as spread/ratio benchmark", _
 		"edit",st_index_period,"Enter index period date", _
 		"radio",!forecast_dep_var,"Variable to be forecasted","""Underlying variable"" ""Dependent variable of equation""", _

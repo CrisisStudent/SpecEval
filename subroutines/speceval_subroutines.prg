@@ -2676,22 +2676,6 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 endif
 		
 endsub
-'
-'' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-'
-'subroutine foreast_graphs_sample(string %sub_tfirst, string %sub_tlast)
-'
-'%graph_sample_string = %sub_tfirst + " " + %sub_tlast
-'
-'if @isempty(%sub_tfirstgraph_user) = 0 then
-'	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tfirst),@upper(%sub_tfirstgraph_user))
-'endif
-'
-'if @isempty(%sub_tlastgraph_user) = 0 then
-'	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tlast),@upper(%sub_tlastgraph_user))
-'endif
-'
-'endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
