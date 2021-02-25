@@ -47,9 +47,9 @@
 
 '	6) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
 '		a) subroutine foreast_graphs_sample(string %sub_tfirst, string %sub_tlast)
-' 		b) subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
-'			- subroutine forecasts_add(string %sub_history_series, string %sub_master_mnemonic,scalar !sub_horizon,   string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_spread_benchmark, string %sub_index_period, string %sub_forecasted_ivariables)
-'		c) subroutine graphs_SubSample(string %sub_history_series, string %sub_master_mnemonic, string %sub_spread_benchmark)
+' 		b) subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_graph_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
+'			- subroutine forecasts_add(string %sub_history_series, string %sub_master_mnemonic,scalar !sub_horizon,   string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_benchmark, string %sub_index_period, string %sub_forecasted_ivariables)
+'		c) subroutine graphs_SubSample(string %sub_history_series, string %sub_master_mnemonic, string %sub_graph_benchmark)
 
 
 '	7) subroutine forecast_bias_graphs(string %sub_history_series,string %sub_master_mnemonic)
@@ -57,7 +57,7 @@
 '	8) subroutine conditional_scenario_forecast
 ' 		a) subroutine missing_scen_variables
 '		b) subroutine csf_forecasting(string %sub_salias_source, string %sub_salias, string %sub_scenario_name, string %sub_model_name)
-'		c) subroutine csf_graphsstring %sub_include_original, string %sub_include_add, string %sub_transformation)
+'		c) subroutine csf_graphs(string %sub_include_original, string %sub_include_add, string %sub_transformation)
 '			- subroutine csf_graph_group(string %sub_include_original, string %sub_add_scenarios, string %sub_add_series)
 '			- subroutine csf_graphs_create(string %sub_trasnformation)
 '			- subroutine csf_graphs_legend(string %sub_include_original, string %sub_add_scenarios, string %sub_transformation)
@@ -84,7 +84,7 @@
 '	12) subroutine evaluation_multireport
 '		a) subroutine insert_specs(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
 '		b) subroutine insert_spec(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
-'		c) subroutine performance_tables_multi	(string %sub_metric, scalar !sub_source_row, string %sub_table_name)
+'		c) subroutine performance_tables_multi(string %sub_metric, scalar !sub_source_row, string %sub_table_name)
 '		d) subroutine colorcode(string %sub_tbname, string %sub_rows, string %sub_cols,string %sub_colors, scalar !sub_scales_n, string %sub_by_type,string %sub_absolute_value) 
 '		e) subroutine colorcode_execution(string %sub_tbname, string %sub_rlist,string %sub_clist, string %sub_absolute_value)
 '		f) subroutine scen_graph_multispec(st_use_names)
@@ -221,6 +221,15 @@ if @wcount(%remove_list)>0 then
 	next
 endif
 
+' Removing items not applicable for identities
+if _this.@type = "STRING" then
+	for %c reg_output stability
+		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
+			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
+		endif
+	next
+endif
+
 ' 2. Equation information
 
 ' Processing equation lists
@@ -242,13 +251,26 @@ if @instr(@upper(st_specification_list),",")>0 then
 	st_specification_list = @wdelim(st_specification_list,","," ")			
 endif
 
+' Adding equation from which add-in was executed
 if @isempty(st_specification_list) then
-	
 	st_specification_list = _this.@name
 else
 	st_specification_list = _this.@name + " " + st_specification_list
 endif
 
+' Removing specifications that do not exist or are not supported type
+for %spec {st_specification_list}
+	if @isobject(%spec)=0 then
+		st_specification_list = @replace(@upper(st_specification_list),@upper(%spec),"")
+	else
+
+		if ({%spec}.@type="EQUATION")=0 and ({%spec}.@type="STRING")=0 and ({%spec}.@type="VAR")=0 then
+			st_specification_list = @replace(@upper(st_specification_list),@upper(%spec),"")
+		endif	
+	endif
+next
+
+' Creating information objects
 st_specification_list = @wunique(@upper(st_specification_list))
 scalar sc_spec_count = @wcount(st_specification_list)
 
@@ -313,6 +335,12 @@ if @wcount(st_auto_selection)>1  then
 		st_auto_selection = @word(st_auto_selection,1) 
 		@uiprompt("WARNING: The number of auto select paratmeters does not correspond to number of equations. Auto select was set to "+ st_auto_selection + ".")
 	endif		
+endif
+
+' Re-setting autoselect argument when used on identities
+
+if _this.@type = "STRING" then
+	st_auto_selection= "f"
 endif
 
 ' 3. Specifying forecast performance parameters
@@ -409,12 +437,16 @@ if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
 endif
 
 ' 5. Additional graph settings
-if @isobject("st_spread_benchmark")=0 then
-	string st_spread_benchmark = "" 
+if @isobject("st_graph_benchmark")=0 then
+	string st_graph_benchmark = "" 
 endif
 
-if @isempty(st_spread_benchmark) and @upper(st_transformation)="SPREAD" then
-	@uiedit(st_spread_benchmark,"Enter name of series you wish to use as spread benchmark")
+if @isempty(st_graph_benchmark) and @upper(st_transformation)="SPREAD" then
+	@uiedit(st_graph_benchmark,"Enter name of series you wish to use as spread benchmark")
+endif
+
+if @isempty(st_graph_benchmark) and @upper(st_transformation)="RATIO" then
+	@uiedit(st_graph_benchmark,"Enter name of series you wish to use as ratio benchmark")
 endif
 
 if @isobject("st_index_period")=0 then
@@ -449,19 +481,15 @@ else
 		st_tlast_scenarios = "@last"
 	endif
 	
-	if @isempty(st_tfirst_sgraph) then
-		st_tfirst_sgraph = "2005" 
-	endif
-	
 	%baseline_alias = @word(st_scenarios,1)
 
-	if @upper(st_include_original)="T" then
-		for %s {st_scenarios}
-			if @isobject(st_base_var + "_"+ %s)=0 then
-				series {st_base_var}_{%s} = na
-			endif
-		next
-	endif
+'	if @upper(st_include_original)="T" then
+'		for %s {st_scenarios}
+'			if @isobject(st_base_var + "_"+ %s)=0 then
+'				series {st_base_var}_{%s} = na
+'			endif
+'		next
+'	endif
 
 endif
 
@@ -1467,7 +1495,12 @@ for !ser1 = 1 to !ser_n
 		if  !ser1<!ser2 then
 			if @val(tb_cor(2+!ser1,1+!ser2))=1 then
 				!{%sub_indicator_name}{!ser2}  = 1
-				%{%sub_indicator_name} = "t"				
+				%{%sub_indicator_name} = "t"
+			else
+				if @instr(tb_cor(2+!ser1,1+!ser2),"NA")>0 then
+					!{%sub_indicator_name}{!ser2}  = 1
+					%{%sub_indicator_name} = "t"
+				endif				
 			endif
 		endif		
 	next
@@ -1520,6 +1553,11 @@ if %perfectcor = "t" then
 endif 	
 
 %est_command_reest = @trim(%est_command_reest)
+
+' Dealing with situation when no regressors are left
+if %perfectcor = "t" and %zerovariance = "t" and @wcount(%est_command_reest ) then
+	%est_command_reest  = %est_command_reest  + " C "
+endif
 
 ' 4. Reestimating
 if @upper(st_ignore_errors)="T" then
@@ -1868,8 +1906,13 @@ else
 	s_depvar.autoarma(tform=none,diff=0,maxar={sc_maxar},maxma={sc_maxma},maxsar=0,maxsma=0,select={st_auto_info},eqname={%sub_eq_name}_reest) s_depvar_f {%regs}
 endif
 
-'Replacing dependent variable placeholder with actual dependent variable
 %command={%sub_eq_name}_reest.@command 
+
+' Specifying original estiamtion method
+%command_original = {%sub_eq_name}.@command 
+%command = @replace(@upper(%command),@upper(@word(%command,1)),@upper(@word(%command_original,1)))
+
+'Replacing dependent variable placeholder with actual dependent variable
 %est_command_reest  = @replace(@upper(%command),"S_DEPVAR",%depvar)
 
 smpl {%tfirst_reestimation} {%tlast_reestimation}
@@ -2456,10 +2499,12 @@ if sc_subsample_count>0 then
 				endif
 			next
 			
-			!average = !sum/!horizons_count
-			call get_formated_value(!average,"metric_average")
-
-			tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = %metric_average
+			if !horizons_count>0 then
+				!average = !sum/!horizons_count
+				call get_formated_value(!average,"metric_average")
+	
+				tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = %metric_average
+			endif
 
 		next	
 		
@@ -2493,8 +2538,12 @@ endsub
 
 subroutine get_formated_value(scalar !sub_value,string %sub_string_name)
 
-if @abs(!sub_value)>10 then
+if @abs(!sub_value)>100 then
 	%{%sub_string_name}= @str(!sub_value,"f.0")
+endif
+
+if @abs(!sub_value)<100 and @abs(!sub_value)>10 then
+	%{%sub_string_name}= @str(!sub_value,"f.1")
 endif
 
 if @abs(!sub_value)<10 and @abs(!sub_value)>1 then
@@ -2516,10 +2565,42 @@ endsub
 
 
 
+' ##################################################################################################################
+
+subroutine forecast_graph_sample
+
+if @wcount(st_tfirst_graph_user)=0 then
+	if @isobject("st_tfirst_backtest") then
+		%tfirst_graph = st_tfirst_backtest
+	else
+		%tfirst_graph = st_base_var.@first
+	endif
+else
+	%tfirst_graph = st_tfirst_graph_user	
+endif
+
+if @wcount(st_tlast_graph_user)=0 then
+	if @isobject("st_tlast_backtest") then
+		%tlast_graph = st_tlast_backtest
+	else
+		%tlast_graph = st_base_var.@last
+	endif
+else
+	%tlast_graph = st_tlast_graph_user	
+endif
+
+%graph_sample_string = %tfirst_graph + " " + %tlast_graph 
+
+endsub
 
 ' ##################################################################################################################
 
-subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast,string %sub_forecast_dep_var)
+
+
+
+' ##################################################################################################################
+
+subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast,string %sub_graph_sample, string %sub_forecast_dep_var)
 
 ' 0. Creating history series if it does not exist
 if @isobject("s_history_series")=0 then
@@ -2533,8 +2614,9 @@ endif
 ' 1. All forecasts
 
 if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
+
 	'  Graph sample
-	call foreast_graphs_sample(st_tfirst_backtest,st_tlast_backtest)
+'	call foreast_graphs_sample(st_tfirst_backtest,st_tlast_backtest)
 	
 	if @upper(st_transformation)="INDEX" then
 		if @isempty(st_index_period) then
@@ -2548,7 +2630,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 	
 		!flength = @val(@word(st_graph_horizons,!flength_id))
 
-		call forecast_graphs_summary("s_history_series",%sub_EqVar + "_f{fstart}",!flength,%sub_tfirst, %sub_tlast,st_transformation,%graph_sample_string,st_spread_benchmark,st_index_period,st_graph_add_backtest,st_forecasted_ivariables) 
+		call forecast_graphs_summary("s_history_series",%sub_EqVar + "_f{fstart}",!flength,%sub_tfirst, %sub_tlast,st_transformation,%sub_graph_sample,st_graph_benchmark,st_index_period,st_graph_add_backtest,st_forecasted_ivariables) 
 		copy(o) gp_forecasts_all gp_forecasts_all_h{!flength}
 		delete(noerr) gp_forecasts_all
 		
@@ -2561,7 +2643,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 	
 		if @dtoo(%sub_tfirst)<=@dtoo(st_subsample{!SubSample}_start) then
 	
-			call graphs_SubSample("s_history_series",%sub_EqVar + "_f{fstart}",st_spread_benchmark)
+			call graphs_SubSample("s_history_series",%sub_EqVar + "_f{fstart}",st_graph_benchmark)
 			copy(o) gp_forecast_SubSample gp_forecast_SubSample{!SubSample}
 			delete(noerr) gp_forecast_SubSample 
 			
@@ -2594,26 +2676,26 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 endif
 		
 endsub
+'
+'' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+'
+'subroutine foreast_graphs_sample(string %sub_tfirst, string %sub_tlast)
+'
+'%graph_sample_string = %sub_tfirst + " " + %sub_tlast
+'
+'if @isempty(%sub_tfirstgraph_user) = 0 then
+'	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tfirst),@upper(%sub_tfirstgraph_user))
+'endif
+'
+'if @isempty(%sub_tlastgraph_user) = 0 then
+'	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tlast),@upper(%sub_tlastgraph_user))
+'endif
+'
+'endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine foreast_graphs_sample(string %sub_tfirst, string %sub_tlast)
-
-%graph_sample_string = %sub_tfirst + " " + %sub_tlast
-
-if @isempty(%sub_tfirstgraph_user) = 0 then
-	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tfirst),@upper(%sub_tfirstgraph_user))
-endif
-
-if @isempty(%sub_tlastgraph_user) = 0 then
-	%graph_sample_string = @replace(@upper(%graph_sample_string),@upper(%sub_tlast),@upper(%sub_tlastgraph_user))
-endif
-
-endsub
-
-' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_spread_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
+subroutine forecast_graphs_summary(string %sub_history_series,string %sub_master_mnemonic, scalar !sub_horizon,string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_sample, string %sub_graph_benchmark, string %sub_index_period, string %sub_graph_add, string %sub_forecasted_ivariables)
 		
 !sub_forecastp_n = @dtoo(%sub_tlast)-@dtoo(%sub_tfirst)+1
 
@@ -2636,7 +2718,12 @@ endif
 
 if @upper(%sub_transformation)="SPREAD" then
 	smpl @all
-	gr_forecasts_all.add {%sub_history_series}-{%sub_spread_benchmark} {%additional_graph_series}
+	gr_forecasts_all.add {%sub_history_series}-{%sub_graph_benchmark} {%additional_graph_series}
+endif
+
+if @upper(%sub_transformation)="RATIO" then
+	smpl @all
+	gr_forecasts_all.add {%sub_history_series}/{%sub_graph_benchmark} {%additional_graph_series}
 endif
 
 if @upper(%sub_transformation)="INDEX" then
@@ -2644,7 +2731,7 @@ if @upper(%sub_transformation)="INDEX" then
 	gr_forecasts_all.add {%sub_history_series}/@elem({%sub_history_series},%sub_index_period)*100 {%additional_graph_series}
 endif
 
-if @isempty(%sub_transformation) or @upper(%sub_transformation)="LEVEL" or @upper(%sub_transformation)="NONE" or @upper(%sub_transformation)="DEVIATION" then
+if @isempty(%sub_transformation) or @upper(%sub_transformation)="LEVEL" or @upper(%sub_transformation)="DEVIATION" or @upper(%sub_transformation)="LOG" then
 	smpl @all
 	gr_forecasts_all.add {%sub_history_series} {%additional_graph_series}
 endif
@@ -2656,7 +2743,7 @@ else
 	%sub_add_tfirst = %sub_tfirst
 endif
 
-call forecasts_add(%sub_history_series,%sub_master_mnemonic,!sub_horizon, %sub_add_tfirst, %sub_tlast, %sub_transformation, %sub_spread_benchmark, %sub_index_period, %sub_forecasted_ivariables)
+call forecasts_add(%sub_history_series,%sub_master_mnemonic,!sub_horizon, %sub_add_tfirst, %sub_tlast, %sub_transformation, %sub_graph_benchmark, %sub_index_period, %sub_forecasted_ivariables)
 
 ' 3. Creating graph
 delete(noerr) gp_forecasts_all
@@ -2681,9 +2768,16 @@ if @wcount(%sub_graph_add)>0 then
 
 		!e_count = !e_count +1
 		!s_count = !s_count + 1
+
 		%hvar_name = @word(%sub_graph_add,!v)
+			
+		if  @word(%sub_graph_add,!v+1)="[R]" then  	'Eviews bug fix
+			%hvar_name = %hvar_name + @word(%sub_graph_add,!v+1)
+			!v = !v+1
+		endif
 
 		gp_forecasts_all.setelem(!e_count) linepattern(solid) legend(%hvar_name) 'symbol(!s_count) 
+
 	
 		if @instr(@upper(%hvar_name),"[R]")>0 then
 			gp_forecasts_all.setelem(!e_count) axis(r)
@@ -2708,8 +2802,8 @@ if @upper(%sub_transformation)="GROWTH" or @upper(%sub_transformation)="SPREAD" 
 	gp_forecasts_all.draw(left,line) 0 0
 endif
 
-if @upper(%sub_transformation)="GROWTH" or @upper(%sub_transformation)="SPREAD" then
-	gp_forecasts_all.draw(left,line) 0 0
+if @upper(%sub_transformation)="LOG" then
+	gp_forecasts_all.axis(l) log
 endif
 
 ' 6. Cleaning up
@@ -2725,7 +2819,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine forecasts_add(string %sub_history_series, string %sub_master_mnemonic,scalar !sub_horizon,   string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_spread_benchmark, string %sub_index_period, string %sub_forecasted_ivariables)
+subroutine forecasts_add(string %sub_history_series, string %sub_master_mnemonic,scalar !sub_horizon,   string %sub_tfirst, string %sub_tlast, string %sub_transformation, string %sub_graph_benchmark, string %sub_index_period, string %sub_forecasted_ivariables)
 
 ' 1. Checking for level-type equations
 %q_level_check = @otod(@dtoo(%sub_tfirst)+8)	
@@ -2744,7 +2838,6 @@ next
 !forecast_level_check = !forecast_level_check1
 
 for !f = 1 to 2
-
 	if !forecast_level_check<>!forecast_level_check{!f} then
 		!level_specification = 0
 		exitloop
@@ -2762,7 +2855,7 @@ for !f = 1 to @dtoo(%sub_tlast)-@dtoo(%sub_tfirst)+1
 	%sub_forecast_series =  @replace(@upper(%sub_master_mnemonic),"{FSTART}",%fstart)
 
 	'Preparing foreast series
-	if @upper(%sub_transformation)<>"GROWTH" and @upper(%sub_transformation)<>"SPREAD" then
+	if @upper(%sub_transformation)<>"GROWTH" and @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" then
 		if !level_specification<>1 then
 			smpl {%fstart}-1 {%fstart}+!sub_horizon-1
 			series forecast{%fstart} = {%sub_forecast_series}
@@ -2784,12 +2877,39 @@ for !f = 1 to @dtoo(%sub_tlast)-@dtoo(%sub_tfirst)+1
 
 	if @upper(%sub_transformation)="SPREAD" then
 
-		if @instr(@upper(%sub_forecasted_ivariables),@upper(%sub_spread_benchmark))>0 then
-			%sub_spread_benchmark = %sub_spread_benchmark + "_f"+ %fstart
+		if @instr(" " + @upper(%sub_forecasted_ivariables) + " "," " + @upper(%sub_graph_benchmark) + " ")>0 then
+			%sub_graph_benchmark_series = %sub_graph_benchmark + "_f"+ %fstart
+
+			if @isobject(%sub_graph_benchmark_series)=0 then
+				%sub_graph_benchmark_series = %sub_graph_benchmark
+			endif
+		else
+			%sub_graph_benchmark_series = %sub_graph_benchmark
+		endif
+
+		if !level_specification<>1 then
+			smpl {%fstart}-1 {%fstart}+!sub_horizon-1
+			series forecast{%fstart} = {%sub_forecast_series}-{%sub_graph_benchmark_series}
+		else
+			smpl {%fstart} {%fstart}+!sub_horizon-1
+			series forecast{%fstart} = {%sub_forecast_series}-{%sub_graph_benchmark_series}
+		endif
+	endif
+
+	if @upper(%sub_transformation)="RATIO" then
+
+		if @instr(" " + @upper(%sub_forecasted_ivariables) + " "," " + @upper(%sub_graph_benchmark) + " ")>0 then
+			%sub_graph_benchmark_series = %sub_graph_benchmark + "_f"+ %fstart
+
+			if @isobject(%sub_graph_benchmark_series)=0 then
+				%sub_graph_benchmark_series = %sub_graph_benchmark
+			endif
+		else
+			%sub_graph_benchmark_series = %sub_graph_benchmark
 		endif
 
 		smpl {%fstart}-1 {%fstart}+!sub_horizon-1
-		series forecast{%fstart} = {%sub_forecast_series}-{%sub_spread_benchmark}
+		series forecast{%fstart} = {%sub_forecast_series}/{%sub_graph_benchmark_series}
 	endif
 
 	if  @upper(%sub_transformation)="INDEX" then
@@ -2805,13 +2925,13 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine graphs_SubSample(string %sub_history_series, string %sub_master_mnemonic, string %sub_spread_benchmark)
+subroutine graphs_SubSample(string %sub_history_series, string %sub_master_mnemonic, string %sub_graph_benchmark)
 
 delete(noerr) gp_forecast_SubSample
 
 %sub_forecast_series =  @replace(@upper(%sub_master_mnemonic),"{FSTART}",st_subsample{!SubSample}_start)
 
-if @upper(st_transformation)="NONE" or @upper(st_transformation)="DEVIATION" then
+if @upper(st_transformation)="LEVEL" or @upper(st_transformation)="LOG" or @upper(st_transformation)="DEVIATION" then
 	smpl {st_subsample{!SubSample}_start}-1  {st_subsample{!SubSample}_end}
 	graph gp_forecast_SubSample.line {%sub_history_series} {%sub_forecast_series}
 endif
@@ -2823,7 +2943,12 @@ endif
 
 if @upper(st_transformation)="SPREAD" then
 	smpl {st_subsample{!SubSample}_start}-1  {st_subsample{!SubSample}_end}
-	graph gp_forecast_SubSample.line {%sub_history_series}-{%sub_spread_benchmark} {%sub_forecast_series}-{%sub_spread_benchmark}
+	graph gp_forecast_SubSample.line {%sub_history_series}-{%sub_graph_benchmark} {%sub_forecast_series}-{%sub_graph_benchmark}
+endif
+
+if @upper(st_transformation)="RATIO" then
+	smpl {st_subsample{!SubSample}_start}-1  {st_subsample{!SubSample}_end}
+	graph gp_forecast_SubSample.line {%sub_history_series}/{%sub_graph_benchmark} {%sub_forecast_series}/{%sub_graph_benchmark}
 endif
 
 if @upper(st_transformation)="INDEX" then
@@ -2833,8 +2958,12 @@ if @upper(st_transformation)="INDEX" then
 	graph gp_forecast_SubSample.line {%sub_history_series}/@elem({%sub_history_series},%base_q_subsample)*100 {%sub_forecast_series}/@elem({%sub_forecast_series},%base_q_subsample)*100
 endif
 
-gp_forecast_SubSample.setelem(1)  legend(Actuals) symbol(filledcircle)
-gp_forecast_SubSample.setelem(2) legend(Forecast)
+gp_forecast_SubSample.setelem(1)  legend(Actuals) symbol(filledsquare)
+gp_forecast_SubSample.setelem(2) legend(Forecast) symbol(cross)
+
+if @upper(st_transformation)="LOG" then
+	gp_forecast_SubSample.axis(l) log
+endif
 
 gp_forecast_SubSample.addtext(t) Conditional forecast for {st_subsample{!SubSample}_start}-{st_subsample{!SubSample}_end}
 
@@ -2949,6 +3078,15 @@ if @isempty(st_tfirst_scenarios)=0 then
 	endif
 else
 	st_tfirst_scenarios = tb_sb_{st_spec_name}(2,3)	
+endif
+
+if @isempty(st_tfirst_sgraph) then
+'	if @isobject("st_tfirst_backtest") then
+'		st_tfirst_sgraph = st_tfirst_backtest
+'	else
+'		st_tfirst_sgraph = st_base_var.@first
+'	endif
+	st_tfirst_sgraph = @otod(@dtoo(st_tfirst_scenarios)-12)
 endif
 
 ' 6. Creating scenario forecasts	
@@ -3127,7 +3265,11 @@ subroutine csf_graphs(string %sub_include_original, string %sub_include_add, str
 call csf_graph_group(%sub_include_original,%sub_include_add,st_graph_add_scenarios)
 
 '3. Creating graphs
-call csf_graphs_create(%sub_transformation)
+if @upper(%sub_include_original)="T" then				
+	call csf_graphs_create(%sub_transformation,%sub_include_original,%scenario + " " + %sub_include_add)
+else
+	call csf_graphs_create(%sub_transformation,%sub_include_original,%sub_include_add)
+endif
 
 ' 4. Adding legends, shading and grid
 call csf_graphs_legend(%sub_include_original,%sub_include_add, %sub_transformation)
@@ -3146,31 +3288,53 @@ endsub
 
 subroutine csf_graph_group(string %sub_include_original, string %sub_add_scenarios, string %sub_add_series)
 
-%addional_graph_series = ""
+%additional_graph_series = ""
+%add_graph_legends = ""
 
 if @isempty(%sub_add_series) = 0 then
-	%addional_graph_series  = st_graph_add_scenarios
+'	%additional_graph_series  = st_graph_add_scenarios
 
-	for %cv {st_graph_add_scenarios}
+	for %cv {%sub_add_series}
+
+		!right_axis = 0
+		!csf = 0 
+
+		if @instr(@upper(%cv),"[R]")>0 then
+			%cv = @replace(@upper(%cv),"[R]","")
+			!right_axis = 1
+		endif
 
 		if @instr(@upper(%cv),"[CSF]")>0 then
 			%cv_alias = "csf"+ %scenario
 			%scenario_series = @replace(@upper(%cv),"[CSF]","") + "_" + %cv_alias		
+			!csf = 1
 		else
 			%cv_alias = %scenario
 			%scenario_series = %cv+ "_" + %cv_alias		
 		endif
 
+		%series_legend = %scenario_series
+
+		if !right_axis = 1 then
+			%series_legend = %series_legend + "[R]"
+		endif
+
+		if !csf = 1 then
+			%series_legend = %series_legend + "[CSF]"
+		endif
+
 		if @isobject(%scenario_series) then
-			%addional_graph_series  = @replace(@upper(%addional_graph_series),@upper(%cv),%scenario_series)	
+			%additional_graph_series  = %additional_graph_series + %scenario_series + " "			
+			%add_graph_legends = %add_graph_legends + %series_legend  + " "
 		else
 			if @isobject(%cv + "_" + %scenario) then
-				%addional_graph_series  = @replace(@upper(%addional_graph_series),@upper(%cv),@upper(%cv) + "_" + %scenario)	
+				%additional_graph_series  = %additional_graph_series + %scenario_series + " "
+				%add_graph_legends = %add_graph_legends + %series_legend  + " "
 			endif
 		endif
 	next
 '	for %scen_var {st_graph_add_scenarios}
-'		%addional_graph_series  = 	%addional_graph_series  + %scen_var + "_" + %scenario + " "
+'		%additional_graph_series  = 	%additional_graph_series  + %scen_var + "_" + %scenario + " "
 '	next
 endif
 
@@ -3189,13 +3353,13 @@ if @wcount(%sub_add_scenarios)>0 then
 	next
 endif
 
-group gr_scen_graph {%csf_included_series} {%addional_graph_series}
+group gr_scen_graph {%csf_included_series} {%additional_graph_series}
 
 endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine csf_graphs_create(string %sub_trasnformation)
+subroutine csf_graphs_create(string %sub_trasnformation, string %sub_include_original, string %sub_add_scenarios)
 
 ' 1. Level graph
 
@@ -3220,18 +3384,24 @@ if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
 	gp_csf_level.addtext(t) Conditional {%scenario}  forecast
 	gp_csf_level.setattr(heading) Conditional {%scenario}  forecast
 
+
+	if @upper(%sub_transformation)="LOG" then
+		gp_csf_level.axis(l) log
+	endif
+
 endif
 
 ' 2.Transformation graphs
+delete(noerr) gp_csf_trans
 
 if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	
 	' Period-change graph
-	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"DEVIATION" then
+	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
 		
 		%graph_string = ""
 		
-		for !gs = 1 to gr_scen_graph.@count
+		for !gs = 1 to gr_scen_graph.@count-@wcount(%additional_graph_series)
 			%gs = gr_scen_graph.@seriesname(!gs)
 			
 			if @upper(st_percentage_error)="T" then
@@ -3239,6 +3409,11 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 			else
 				%graph_string = %graph_string + " " + "@d(" + %gs + ")" 
 			endif				
+		next
+
+		for !gs =gr_scen_graph.@count-@wcount(%additional_graph_series)+1 to gr_scen_graph.@count
+			%gs = gr_scen_graph.@seriesname(!gs)
+			%graph_string = %graph_string +" " + %gs
 		next
 		
 		graph gp_csf_trans.line  {%graph_string} 	
@@ -3258,27 +3433,72 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	
 		%graph_string = ""
 		
-		for !gs = 1 to gr_scen_graph.@count
+		for !gs = 1 to gr_scen_graph.@count-@wcount(%additional_graph_series)
+			%gs = gr_scen_graph.@seriesname(!gs)
+
+			%series_scenario = @word(%scenario + " " + %sub_add_scenarios,!gs)
+
+			if @instr(@upper(%series_scenario),"CSF")>0 then
+				%series_scenario = @replace(@upper(%series_scenario),"CSF","")
+			endif
+
+			if @isobject(st_graph_benchmark + "_" + %series_scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %series_scenario
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
+	
+			%graph_string = %graph_string +" " + %gs + "-" + %graph_benchmark_scen
+		next
+
+		for !gs =gr_scen_graph.@count-@wcount(%additional_graph_series)+1 to gr_scen_graph.@count
+			%gs = gr_scen_graph.@seriesname(!gs)
+			%graph_string = %graph_string +" " + %gs
+		next
+
+		smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+		graph gp_csf_trans.line  {%graph_string} 
+		gp_csf_trans.addtext(t) Conditional {%scenario}  forecast - Spread from {st_graph_benchmark}
+		gp_csf_trans.setattr(heading) Conditional {%scenario}  forecast - Spread from {st_graph_benchmark}
+	endif
+	
+	' Ratio graph
+	if @upper(%sub_transformation)="RATIO"  then
+	
+		%graph_string = ""
+		
+		for !gs = 1 to gr_scen_graph.@count-@wcount(%additional_graph_series)
 			%gs = gr_scen_graph.@seriesname(!gs)
 	
-			%spread_benchmark_scen = st_spread_benchmark + "_" + %scenario
+			if @isobject(st_graph_benchmark + "_" + %scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %scenario	
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
 	
-			%graph_string = %graph_string +" " + %gs + "-" + %spread_benchmark_scen
+			%graph_string = %graph_string +" " + %gs + "/" + %graph_benchmark_scen
+		next
+
+		for !gs =gr_scen_graph.@count-@wcount(%additional_graph_series)+1 to gr_scen_graph.@count
+			%gs = gr_scen_graph.@seriesname(!gs)
+			%graph_string = %graph_string +" " + %gs
 		next
 		
 		smpl {st_tfirst_sgraph} {st_tlast_scenarios}
 		graph gp_csf_trans.line  {%graph_string} 
-		gp_csf_trans.addtext(t) Conditional {%scenario}  forecast - Spread from {st_spread_benchmark}
-		gp_csf_trans.setattr(heading) Conditional {%scenario}  forecast - Spread from {st_spread_benchmark}
+		gp_csf_trans.addtext(t) Conditional {%scenario}  forecast - Ratio to {st_graph_benchmark}
+		gp_csf_trans.setattr(heading) Conditional {%scenario}  forecast - Ratio to {st_graph_benchmark}
 	endif
-	
+
 	' Deviations from baseline graph
 	if @upper(%sub_transformation)="DEVIATION" then
 	
 		%graph_string = ""
 		
-		for !gs = 1 to gr_scen_graph.@count
+		for !gs = 1 to gr_scen_graph.@count-@wcount(%additional_graph_series)
 			%gs = gr_scen_graph.@seriesname(!gs)
+
+
 	
 			if @upper(st_percentage_error)="T" then
 				%graph_string = %graph_string + " " + "(" + %gs + "/" + st_base_var + "_csf" + %baseline_alias + "-1" + ")*100" 
@@ -3286,8 +3506,20 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 				%graph_string = %graph_string + " " + %gs + "-" + st_base_var + "_csf" + %baseline_alias
 			endif				
 		next
+
+		for !ags = 1 to @wcount(%additional_graph_series)
+			%ags = @word(%additional_graph_series,!ags)
+
+			%graph_string = %graph_string +  " " + "(" + %ags + "/" + @replace(@upper(%ags),"_"+ @upper(%scenario),"_"+ %baseline_alias) + "-1" + ")*100" 
+			
+		next
 		
-		smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+		if @upper(%sub_transformation)="DEVIATION" then
+			smpl {st_tfirst_scenarios}-1 {st_tlast_scenarios}
+		else
+			smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+		endif
+
 		graph gp_csf_trans.line  {%graph_string} 	
 	
 		if @upper(st_percentage_error)="T" then
@@ -3360,7 +3592,16 @@ for %gp {%scenario_graph_list}
 
 	if @wcount(gp_csf_{%gp}.@members)>!ecount then
 		for !e = !ecount+1 to @wcount(gp_csf_{%gp}.@members)
-			gp_csf_{%gp}.setelem(!e) linepattern(solid)	
+			%legend = @word(%add_graph_legends,!e-!ecount)
+
+			if @instr(@upper(%legend),"[R]")>0 and @upper(%gp)<>"TRANS" then
+				%legend = @replace(@upper(%legend),"[R]","(R)")
+				gp_csf_{%gp}.setelem(!e) axis(r) 
+				gp_csf_{%gp}.axis +overlap
+			endif
+
+			gp_csf_{%gp}.setelem(!e) linepattern(solid)	 legend({%legend})
+
 		next
 	endif
 
@@ -3402,6 +3643,10 @@ if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
 	gp_csf_level_all.addtext(t) Conditional scenario forecasts
 	gp_csf_level_all.setattr(heading) Conditional scenario forecasts
 
+	if @upper(%sub_transformation)="LOG" then
+		gp_csf_level_all.axis(l) log
+	endif
+
 	delete(noerr) gr_all_scen_graph
 
 endif
@@ -3411,7 +3656,7 @@ endif
 if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	
 	' Q/Q graph string
-	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"DEVIATION" then
+	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
 		
 		%graph_string = ""
 	
@@ -3435,12 +3680,36 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 		for %scenario {%model_baseline_alias} {st_scenarios}
 			%gs = @replace(@upper(%sub_scenario_forecast),"{S}",%scenario)
 	
-			string st_spread_benchmark_scen = st_spread_benchmark + "_" + %scenario
+			if @isobject(st_graph_benchmark + "_" + %scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %scenario	
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
 	
-			%graph_string = %graph_string +" " + %gs + "-" + st_spread_benchmark_scen
+			%graph_string = %graph_string +" " + %gs + "-" + %graph_benchmark_scen
 		next
 	endif
 	
+	' Ratio graph string
+	if @upper(%sub_transformation)="RATIO"  then
+		
+		%graph_string = ""
+		
+		for %scenario {%model_baseline_alias} {st_scenarios}
+			%gs = @replace(@upper(%sub_scenario_forecast),"{S}",%scenario)
+
+			if @isobject(st_graph_benchmark + "_" + %scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %scenario	
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
+
+	
+			%graph_string = %graph_string +" " + %gs + "/" + %graph_benchmark_scen
+		next
+	endif
+	
+
 	' Devaitions from baseline graph string 
 	if @upper(%sub_transformation)="DEVIATION" then
 		
@@ -3481,7 +3750,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	endif
 	
 	' Adding description text
-	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"DEVIATION" then
+	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
 		if @upper(st_percentage_error)="T" then
 			gp_csf_trans_all.addtext(t) Conditional scenario forecasts - Growth rate
 			gp_csf_trans_all.setattr(heading) Conditional scenario forecasts - Growth rate
@@ -3492,7 +3761,11 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	endif
 	
 	if @upper(%sub_transformation)="SPREAD"  then
-		gp_csf_trans_all.addtext(t) Conditional scenario forecasts - Spread from {st_spread_benchmark}
+		gp_csf_trans_all.addtext(t) Conditional scenario forecasts - Spread from {st_graph_benchmark}
+	endif
+
+	if @upper(%sub_transformation)="RATIO"  then
+		gp_csf_trans_all.addtext(t) Conditional scenario forecasts - Ratio to {st_graph_benchmark}
 	endif
 	
 	if @upper(%sub_transformation)="DEVIATION" then
@@ -3620,8 +3893,8 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 			%ss_include_list = %ss_name + " "
 		endif
 
-		if @isobject("gp_subsample"+ @str(!SubSample) + "_fd") then
-			sp_spec_evaluation.insert(name={%ss_name}_decomposition) gp_subsample{!subsample}_fd
+		if @isobject("gp_forecast_subsample"+ @str(!SubSample) + "_fd") then
+			sp_spec_evaluation.insert(name={%ss_name}_decomposition) gp_forecast_subsample{!subsample}_fd
 		endif
 	next	
 
@@ -3799,27 +4072,29 @@ next
 ' Color coding
 for !reg = 1 to {%sub_equation_name}.@ncoef
 	if @val(tb_reg_output(!start_row+!reg-1,!pvalue_column))<0.1 then
-		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column) green
-		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) green
+		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column) @rgb(120,192,48)
+		'tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) green
 	endif
 
 	if @val(tb_reg_output(!start_row+!reg-1,!pvalue_column))>0.1 and @val(tb_reg_output(!start_row+!reg-1,!pvalue_column))<0.25 then
 		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column) yellow
-		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) yellow
+		'tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) yellow
 	endif
 
 	if @val(tb_reg_output(!start_row+!reg-1,!pvalue_column))>0.25 then
-		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column) red
-		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) red
+		tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column) @rgb(255,128,0)
+		'tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column-1) red
 	endif
 
 
 	if @val(tb_reg_output(!start_row+!reg-1,2))>0 then
-		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(255,128,0)
-		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(255,128,0)
+		'tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(255,128,0)
+		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(0,180,0)
+		'tb_reg_output.setfont(!start_row+!reg-1,2) +b
 	else
-		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(0,255,255)
-		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(0,255,255)
+		'tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(0,255,255)
+		tb_reg_output.setfillcolor(!start_row+!reg-1,2) @rgb(230,32,32)
+		'tb_reg_output.setfont(!start_row+!reg-1,2) +b
 	endif
 next
 
@@ -3856,7 +4131,7 @@ next
 tb_reg_output.setwidth(1) !max_length
 
 
-' 6. Inputing varaible descriptions
+' 6. Inputing variable descriptions
 
 ' Headings
 !last_row = tb_reg_output.@rows
@@ -3936,7 +4211,7 @@ next
 tb_reg_output.setlines(!next_row,1,!next_row,6) +d
 
 
-' Deleteing if no description was inserted
+' Deleting if no description was inserted
 !description_inserted = 0
 for !evar = 1 to @wcount(%eq_variables)
 	if @isempty(tb_reg_output(!heading_row+1+!evar,2))=0 then
@@ -3982,7 +4257,7 @@ for !reg = 1 to {%sub_equation_name}.@ncoef
 
 		' Color coding
 		if @abs(@val(tb_reg_output(!start_row+!reg-1,!pvalue_column+1)))>0.5 then
-			tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column+1) green
+			tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column+1) @rgb(120,192,48)
 		endif
 
 		if @abs(@val(tb_reg_output(!start_row+!reg-1,!pvalue_column+1)))<0.5 and @abs(@val(tb_reg_output(!start_row+!reg-1,!pvalue_column+1)))>0.1 then
@@ -3990,7 +4265,7 @@ for !reg = 1 to {%sub_equation_name}.@ncoef
 		endif
 
 		if @abs(@val(tb_reg_output(!start_row+!reg-1,!pvalue_column+1)))<0.1 then
-			tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column+1) red
+			tb_reg_output.setfillcolor(!start_row+!reg-1,!pvalue_column+1) @rgb(255,128,0)
 		endif
 	endif
 next	
@@ -4409,7 +4684,7 @@ endsub
 
 subroutine results_aliasing(string %sub_alias)
 
-' Creating object list
+' 1. Creating object list
 if sc_spec_count>1 then
 	%object_list = "sp_spec_evaluation tb_performance_metrics tb_reg_output"
 else
@@ -4422,7 +4697,7 @@ for !fh = 1 to sc_graph_horizons_n
 next
 
 for !ss = 1 to sc_subsample_count
-	%object_list = %object_list  + " " +  "gp_forecast_subsample" + @str(!ss) + " " + "gp_subsample"+ @str(!ss)  + "_fd"
+	%object_list = %object_list  + " " +  "gp_forecast_subsample" + @str(!ss) + " " + "gp_forecast_subsample"+ @str(!ss)  + "_fd"
 next
 
 for !fh = 1 to sc_bias_horizons_n
@@ -4430,6 +4705,7 @@ for !fh = 1 to sc_bias_horizons_n
 	%object_list = %object_list + " " + "gp_forecast_bias_h" + %fh
 	%object_list = %object_list + " " + "m_fb_h" + %fh
 next
+
 if @isempty(st_scenarios)=0 then
 	for %s {st_scenarios}
 		%object_list = %object_list + " " + "gp_csf_level_"	+ %s + " " + "gp_csf_trans_"	+ %s + " "+  "gp_csf_fd_" + %s  + " "+  "gp_csf_fdd_" + %s  
@@ -4463,7 +4739,7 @@ endif
 
 'string st_object_list = %object_list
 
-' Creating aliased objects
+' 2. Creating aliased objects
 for %obj {%object_list}
 	
 	if @instr(@upper(%obj),"*")>0 then
@@ -4547,6 +4823,7 @@ if @upper(st_keep_objects)="F" and sc_spec_count=1 then
 
 	for !ss = 1 to sc_subsample_count
 		delete(noerr) gp_forecast_subsample{!ss}
+		delete(noerr) gp_forecast_subsample{!ss}_fd
 	next	
 
 	if @isempty(st_scenarios)=0 then
@@ -4749,18 +5026,37 @@ endif
 if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 	for !ss = 1 to sc_subsample_count 
 				
+		delete(noerr) sp_subsample{!ss}
 		spool sp_subsample{!ss}
-		
+	
 		for !spec_id = 1 to sc_spec_count
 	
 			call spec_alias
 			
 			if @isobject("gp_forecast_SubSample"+ @str(!ss) + "_" + st_alias) then
+				if @upper(st_use_names) = "T" then			
+					%eq_name = @word(st_specification_list,!spec_id)
+					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - {%eq_name}
+				else
+					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - Equation {st_alias}
+				endif
+
 				call insert_spec("sp_subsample" + @str(!ss),"gp_forecast_subsample" + @str(!ss), st_use_names)
 			endif		
 
-			if @isobject("gp_subsample"+ @str(!ss)+ "_fd_" + st_alias) then
-				sp_subsample{!ss}.insert(name=spec_{st_alias}_decomposition) gp_subsample{!ss}_fd_{st_alias}
+			if @isobject("gp_forecast_SubSample"+ @str(!ss) + "_fd_" + st_alias) then
+
+				%heading = gp_forecast_subsample{!ss}_fd_{st_alias}.@attr("desc")
+			
+				if @upper(st_use_names) = "T" then			
+					%eq_name = @word(st_specification_list,!spec_id)
+					%heading = %heading + " -  " + %eq_name
+				else
+					%heading = %heading + " - Equation "+ st_alias
+				endif
+
+				gp_forecast_subsample{!ss}_fd_{st_alias}.addtext(t) {%heading}
+				sp_subsample{!ss}.insert(name=spec_{st_alias}_decomposition) gp_forecast_subsample{!ss}_fd_{st_alias}
 			endif
 		next	
 		
@@ -5006,7 +5302,7 @@ endif
 if @upper(st_keep_objects)="F" then
 	for !spec_id = 1 to sc_spec_count
 		call spec_alias
-		delete(noerr)  sp_spec_evaluation_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} gp_coef_stability_{st_alias} gp_lag_orders_{st_alias} sp_spec_evaluation_{st_alias} 
+		delete(noerr)  sp_spec_evaluation_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} gp_forecast_subsample*_fd_{st_alias}  tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} gp_coef_stability_{st_alias} gp_lag_orders_{st_alias} sp_spec_evaluation_{st_alias} 
 	next
 endif
 
@@ -5114,6 +5410,9 @@ else
 endif
 
 call colorcode("tb_"  + %sub_metric,"4-" + @str(!last_row),"2-"+ @str(!last_col),"green yellow red",!scale_n,"cols",%av)
+
+' Additional formatting
+tb_{%sub_metric}.setmerge(1,2,1,!last_col)
 
 'Inserting into spool
 sp_performance_metrics.insert(name={%sub_table_name}) tb_{%sub_metric}
@@ -5404,13 +5703,13 @@ if @wcount(st_scenarios)>0 then
 				%last_specification = @str(sc_spec_count)
 			endif
 			
-			gp_csf_mslevel_{%s}.addtext(t) Conditional {%scenario}  forecast - Specification {%first_specification} to {%last_specification} (Level)
+			gp_csf_mslevel_{%s}.addtext(t) Conditional {%s}  forecast - Specification {%first_specification} to {%last_specification} (Level)
 			sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}) gp_csf_mslevel_{%s}
 			delete gp_csf_mslevel_{%s}
 
 			if @isobject("gp_csf_mstrans_" + %s) then
 
-				gp_csf_mstrans_{%s}.addtext(t) Conditional {%scenario}  forecast  - Specification {%first_specification} to {%last_specification} ({%trans_description})
+				gp_csf_mstrans_{%s}.addtext(t) Conditional {%s}  forecast  - Specification {%first_specification} to {%last_specification} ({%trans_description})
 				sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}_trans) gp_csf_mstrans_{%s}
 				delete gp_csf_mstrans_{%s}
 			endif
@@ -5450,7 +5749,7 @@ call mssg_graph_format("gp_csf_mslevel_" + %s, %sub_include_baseline,%sub_includ
 %graph_string_trans = ""
 
 for !gm = 1 to @wcount(%graph_members)
-	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"DEVIATION" then
+	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
 		if @upper(st_percentage_error)="T" then
 			%trans_description = "Growth rate"
 			%graph_string_trans = %graph_string_trans + "@pca(" + @word(%graph_members,!gm) +  ")"  + " "
@@ -5460,10 +5759,28 @@ for !gm = 1 to @wcount(%graph_members)
 		endif
 	endif
 
-	if @upper(%sub_transformation)="SPREAD"  then
-		%trans_description = "Spread from " + st_spread_benchmark
-		%spread_benchmark_scen = st_spread_benchmark + "_" + %sub_scenario
-		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "-" + %spread_benchmark_scen  + " "
+	if @upper(%sub_transformation)="SPREAD" then
+		%trans_description = "Spread from " + st_graph_benchmark
+
+		if @isobject(st_graph_benchmark + "_" + %scenario) then
+			%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
+		else
+			%graph_benchmark_scen = st_graph_benchmark
+		endif
+
+		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "-" + %graph_benchmark_scen  + " "
+	endif
+
+	if @upper(%sub_transformation)="RATIO"  then
+		%trans_description = "Ratio to " + st_graph_benchmark
+
+		if @isobject(st_graph_benchmark + "_" + %scenario) then
+			%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
+		else
+			%graph_benchmark_scen = st_graph_benchmark
+		endif
+
+		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "/" + %graph_benchmark_scen  + " "
 	endif
 
 	if @upper(%sub_transformation)="DEVIATION" and (@upper(%sub_scenario)=@upper(%baseline_alias))=0 and (@upper(st_include_baseline)="T" and !gm=1)=0 then
@@ -5490,6 +5807,10 @@ if @isempty(%graph_string_trans)=0 then
 		call mssg_graph_format("gp_csf_mstrans_" + %s,"f",%sub_include_original,%sub_use_names)
 	else
 		call mssg_graph_format("gp_csf_mstrans_" + %s,%sub_include_baseline,%sub_include_original,%sub_use_names)
+	endif
+
+	if @upper(%sub_transformation)="LOG" then
+		gp_csf_mstrans_{%s}.axis(l) log
 	endif
 endif
 

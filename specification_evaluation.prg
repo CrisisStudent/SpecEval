@@ -123,6 +123,8 @@ if !dogui=1 then
 	!include_bias = 0 		
 	!percentage_error = 1
 	!transformation = 1
+	string st_graph_benchmark = ""
+	string st_index_period = ""
 	!include_growth_rate = 0		
 	!forecast_dep_var = 1
 	string st_graph_add_backtest = ""
@@ -153,7 +155,9 @@ if !dogui=1 then
 		"text","=========================", _
 		"text","", _
 		"text","PERFORMANCE GRAPH OPTIONS", _	
-		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" Index ""Deviation from baseline""", _
+		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Logarithm Index ""Deviation from baseline""", _
+		"edit",st_graph_benchmark,"Enter name of series you wish to use as spread/ratio benchmark", _
+		"edit",st_index_period,"Enter index period date", _
 		"radio",!forecast_dep_var,"Variable to be forecasted","""Underlying variable"" ""Dependent variable of equation""", _
 		"edit",st_graph_add_backtest,"Enter the list of series to include in backtest graphs",100, _
 		"edit",st_graph_add_scenarios,"Enter the list of series to include in scenario graphs",100, _
@@ -188,12 +192,8 @@ if !dogui=1 then
 	
 	string st_percentage_error = @word("AUTO T F",!percentage_error)
 			
-	string st_transformation = @word("none growth spread index deviation",!transformation)
+	string st_transformation = @word("level growth spread ratio log index deviation",!transformation)
 
-	if @upper(st_transformation)="Deviation" then
-		@uiedit(st_index_period,"Enter index period date")
-	endif
-	
 	'if !include_growth_rate = 1 then
 		string st_include_growth_rate = "f"
 	'endif
@@ -261,7 +261,7 @@ if !dogui=1 then
 	endif
 endif
 
-' 3. Extract execution options
+' 3. Program execution options
 if !dogui=0 then
 
 	' Main options
@@ -325,7 +325,7 @@ if !dogui=0 then
 			
 	string st_transformation = @equaloption("TRANS")	
 	
-	string st_spread_benchmark = @equaloption("SPREAD_BENCH")
+	string st_graph_benchmark = @equaloption("GRAPH_BENCH")
 	
 	string st_index_period = @equaloption("INDEX_PERIOD")
 	
@@ -333,6 +333,7 @@ if !dogui=0 then
 	
 	string st_graph_add_backtest = @equaloption("GRAPH_ADD_BACKTEST")
 	string st_graph_add_scenarios = @equaloption("GRAPH_ADD_SCENARIOS")
+
 	string st_include_original = @equaloption("ORIGINAL_FORECAST")	
 	string st_include_baseline = @equaloption("BASELINE_FORECAST")	
 	string st_add_scenarios = @equaloption("ADD_SCENARIOS")		
@@ -360,8 +361,8 @@ if !dogui=0 then
 		string st_outofsample = "t"	
 	endif
 		
-	if @isempty(st_transformation) then
-		string st_transformation = "none"  
+	if @isempty(st_transformation) or (@upper(st_transformation)<>"GROWTH" and @upper(st_transformation)<>"INDEX" and @upper(st_transformation)<>"SPREAD" and @upper(st_transformation)<>"RATIO" and @upper(st_transformation)<>"DEVIATION" and @upper(st_transformation)<>"LOG")  then
+		string st_transformation = "level"  
 	endif
 	
 	if @isempty(st_forecast_dep_var) then

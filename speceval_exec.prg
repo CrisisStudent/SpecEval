@@ -56,8 +56,9 @@ for !spec_id = 1 to sc_spec_count
 	' ##################################################
 	
 	if @instr(@upper(st_exec_list),"GRAPHS") then
-		statusline Foreacst performance graphs ({st_spec_name})
-		call forecast_graphs(st_base_var, st_spec_name, sc_forecastp_n, st_tfirst_backtest,st_tlast_backtest,st_forecast_dep_var)
+		statusline Forecast performance graphs ({st_spec_name})
+		call forecast_graph_sample
+		call forecast_graphs(st_base_var, st_spec_name, sc_forecastp_n, st_tfirst_backtest,st_tlast_backtest, %graph_sample_string, st_forecast_dep_var)
 	endif
 
 	if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
@@ -134,11 +135,12 @@ if @upper(st_keep_settings)="F" then
 	st_transformation st_outofsample sc_subsample_count st_subsamples st_performance_metrics _
 	st_spec_alias_list st_specification_list sc_spec_count  st_base_var  st_alias st_spec_name _
 	st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user _ 
-	st_subsample{!SubSample} st_subsample{!SubSample}_start st_subsample{!SubSample}_end _
+	st_subsample* st_subsample*_start st_subsample*_end sc_subsample*_start sc_subsample*_length _
+	tb_forecast_decomposition _
 	st_include_bias st_include_mae st_include_rmse st_percentage_error _
 	st_auto_selection st_custom_reestimation st_forecast_dep_var st_include_growth_rate _
 	st_scenarios st_scenario_dataload st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph _
-	st_graph_add_backtest st_graph_add_scenarios st_include_baseline st_include_original st_index_period st_spread_benchmark st_add_scenarios _
+	st_graph_add_backtest st_graph_add_scenarios st_include_baseline st_include_original st_index_period st_graph_benchmark st_add_scenarios _
 	st_eq_list_add sc_add_eq_count st_model_name_add st_forecasted_ivariables _ 
 	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names st_save_output st_include_descriptions _
 	st_exec_list st_exec_list_user st_ignore_errors
