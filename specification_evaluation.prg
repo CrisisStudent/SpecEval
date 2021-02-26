@@ -47,7 +47,7 @@ if !dogui=1 then
 	' Defaults
 	string st_exec_list_user = "medium"
 	!forecast_type = 1
-	string st_forecast_horizons = "1 2 4 8 12"
+	string st_horizons_metrics = "1 2 4 8 12"
 	string st_specification_list = _this.@name
 	string st_scenarios = "" 
 	string st_ignore_errors = "f"	
@@ -61,7 +61,7 @@ if !dogui=1 then
 		"edit",st_exec_list_user,"Enter list of procedure components you wish to include in execution",100, _
 		"edit",st_specification_list,"Enter list of specifications", 200, _ 
 		"radio",!forecast_type,"Type of forecasts","Out-of-sample In-sample", _
-		"edit",st_forecast_horizons,"Enter the list of horizons", _
+		"edit",st_horizons_metrics,"Enter the list of horizons", _
 		"edit",st_scenarios,"Enter list of scenarios", _ 
 		"check",!date_settings,"Change date settings", _
 		"check",!advanced_options,"Change andvanced options", _
@@ -110,11 +110,11 @@ if !dogui=1 then
 
 	' Defaults
 
-	if st_forecast_horizons<>"1 2 4 8 12" then
-		string st_graph_horizons = st_forecast_horizons
-		string st_bias_horizons = st_forecast_horizons
+	if st_horizons_metrics<>"1 2 4 8 12" then
+		string st_horizons_graph = st_horizons_metrics
+		string st_bias_horizons = st_horizons_metrics
 	else
-		string st_graph_horizons = "4 12" 
+		string st_horizons_graph = "4 12" 
 		string st_bias_horizons = "4"
 	endif
 
@@ -145,7 +145,7 @@ if !dogui=1 then
 		' Dialog
 		!result = @uidialog("caption","Advanced options", _
 		"text","PERFORMANCE METRIC OPTIONS", _ 
-		"edit",st_graph_horizons,"Enter the list of graph horizons", _
+		"edit",st_horizons_graph,"Enter the list of graph horizons", _
 		"edit",st_bias_horizons,"Enter the list of bias graph horizons", _
 		"text","Which performance metric you want to include?", _
 		"check",!include_rmse,"RMSE", _
@@ -265,8 +265,8 @@ endif
 if !dogui=0 then
 
 	' Main options
-	string st_forecast_horizons = @equaloption("HORIZONS_FORECAST")
-	string st_graph_horizons = @equaloption("HORIZONS_GRAPH")
+	string st_horizons_metrics = @equaloption("HORIZONS_METRICS")
+	string st_horizons_graph = @equaloption("HORIZONS_GRAPH")
 	string st_bias_horizons = @equaloption("HORIZONS_BIAS")
 	string st_outofsample = @equaloption("OOS")
 
@@ -334,8 +334,8 @@ if !dogui=0 then
 	string st_graph_add_backtest = @equaloption("GRAPH_ADD_BACKTEST")
 	string st_graph_add_scenarios = @equaloption("GRAPH_ADD_SCENARIOS")
 
-	string st_include_original = @equaloption("ORIGINAL_FORECAST")	
-	string st_include_baseline = @equaloption("BASELINE_FORECAST")	
+	string st_include_original = @equaloption("INCLUDE_ORIGINAL")	
+	string st_include_baseline = @equaloption("INCLUDE_BASELINE")	
 	string st_add_scenarios = @equaloption("ADD_SCENARIOS")		
 	
 	' Advanced forecast options	

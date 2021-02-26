@@ -48,7 +48,7 @@ for !spec_id = 1 to sc_spec_count
 		statusline Forecast performance metrics	({st_spec_name})	
 
 		%master_mnemonic = st_base_var + "_f{fstart}"
-		call performance_metrics(st_base_var,%master_mnemonic, sc_forecastp_n,st_tfirst_backtest,st_tfirst_backtest,st_subsamples,st_performance_metrics,st_forecast_dep_var,st_include_growth_rate,st_forecast_horizons)
+		call performance_metrics(st_base_var,%master_mnemonic, sc_forecastp_n,st_tfirst_backtest,st_tfirst_backtest,st_subsamples,st_performance_metrics,st_forecast_dep_var,st_include_growth_rate,st_horizons_metrics)
 	endif
 	
 	' ##################################################
@@ -131,7 +131,7 @@ if @upper(st_keep_information)="F" then
 endif
 
 if @upper(st_keep_settings)="F" then	
-	delete(noerr) sc_bias_horizons_n st_bias_horizons sc_forecast_horizons_n st_forecast_horizons sc_graph_horizons_n st_graph_horizons _
+	delete(noerr) sc_bias_horizons_n st_bias_horizons sc_horizons_metrics_n st_horizons_metrics sc_horizons_graph_n st_horizons_graph _
 	st_transformation st_outofsample sc_subsample_count st_subsamples st_performance_metrics _
 	st_spec_alias_list st_specification_list sc_spec_count  st_base_var  st_alias st_spec_name _
 	st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user _ 

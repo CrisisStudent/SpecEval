@@ -37,12 +37,12 @@
 '		i) subroutine subsample_ident
 
 '	5) subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples, string %sub_forecast_dep_var, string %sub_include_growth_rate)
-'		a) subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_forecast_horizons)
+'		a) subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_horizons_metrics)
 '		b) subroutine performance_vectors(string %sub_vector_name_prefix, string %sub_performance_metrics, string %sub_include_growth_rate)
 '		c) subroutine fe_vectors(string %sub_vector_name_prefix, scalar !sub_forecastp_n, string %sub_tlast, scalar !sub_flength, string %sub_include_growth_rate)
 '		d) subroutine performance_calculation(string %sub_EqVar, string %sub_history_series, string %sub_master_mnemonic, string %sub_tfirst, scalar !sub_forecastp_n, string %sub_performance_metrics, string %sub_include_growth_rate)
 '		e) subroutine forecast_error_calculation(string %sub_history_series, string %sub_forecast_series, string %sub_fend, string %sub_percentage_error, string %sub_vector,scalar !sub_position)
-'		f) subroutine metrics_table(string %sub_performance_metrics, string %sub_forecast_horizons)
+'		f) subroutine metrics_table(string %sub_performance_metrics, string %sub_horizons_metrics)
 '			- subroutine get_formated_value(scalar !sub_value,string %sub_string_name)
 
 '	6) subroutine forecast_graphs(string %sub_EqVar, string %sub_eq_name,  scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast)
@@ -138,27 +138,27 @@ endif
 if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
 	st_exec_list = @replace(@upper(st_exec_list),"SHORT","FORECASTS METRICS GRAPHS_SUMMARY REG_OUTPUT")
 
-	if @isempty(st_forecast_horizons) then
-		string st_forecast_horizons = "8 24"
-		!forecast_horizons_user = 0 
+	if @isempty(st_horizons_metrics) then
+		string st_horizons_metrics = "8 24"
+		!horizons_metrics_user = 0 
 	endif
 endif
 
 if @instr(" " + @upper(st_exec_list) + " "," MEDIUM ") then
 	st_exec_list = @replace(@upper(st_exec_list),"MEDIUM","FORECASTS METRICS GRAPHS_SUMMARY GRAPHS_SS SCENARIOS_ALL REG_OUTPUT")
 
-'	if @isempty(st_forecast_horizons) then
-'		string st_forecast_horizons = "8 24"
-'		!forecast_horizons_user = 0 
+'	if @isempty(st_horizons_metrics) then
+'		string st_horizons_metrics = "8 24"
+'		!horizons_metrics_user = 0 
 '	endif
 endif
 
 if @instr(" " + @upper(st_exec_list) + " "," LONG ") then
 	st_exec_list = @replace(@upper(st_exec_list),"LONG","ALL")
 
-	if @isempty(st_forecast_horizons) then
-		string st_forecast_horizons = "2 4 8 16 24"
-		!forecast_horizons_user = 0 
+	if @isempty(st_horizons_metrics) then
+		string st_horizons_metrics = "2 4 8 16 24"
+		!horizons_metrics_user = 0 
 	endif
 
 	if @isempty(st_performance_metrics) then
@@ -360,17 +360,17 @@ next
 
 
 ' Horizons 
-!forecast_horizons_user = 1
-if @isempty(st_forecast_horizons) then
-	string st_forecast_horizons = "8 24"
-	!forecast_horizons_user = 0 
+!horizons_metrics_user = 1
+if @isempty(st_horizons_metrics) then
+	string st_horizons_metrics = "8 24"
+	!horizons_metrics_user = 0 
 endif
 
-if @isempty(st_graph_horizons) then
-	if !forecast_horizons_user = 0 then
-		string st_graph_horizons = "8 24"	
+if @isempty(st_horizons_graph) then
+	if !horizons_metrics_user = 0 then
+		string st_horizons_graph = "8 24"	
 	else
-		string st_graph_horizons = st_forecast_horizons
+		string st_horizons_graph = st_horizons_metrics
 	endif	
 endif
 
@@ -378,15 +378,15 @@ if @isempty(st_bias_horizons) then
 	string st_bias_horizons = "8 24"
 endif
 
-st_forecast_horizons = @replace(st_forecast_horizons,", "," ")
-st_forecast_horizons = @replace(st_forecast_horizons,",","")
-st_graph_horizons = @replace(st_graph_horizons,", "," ")
-st_graph_horizons = @replace(st_graph_horizons,",","")
+st_horizons_metrics = @replace(st_horizons_metrics,", "," ")
+st_horizons_metrics = @replace(st_horizons_metrics,",","")
+st_horizons_graph = @replace(st_horizons_graph,", "," ")
+st_horizons_graph = @replace(st_horizons_graph,",","")
 st_bias_horizons = @replace(st_bias_horizons,", "," ")
 st_bias_horizons = @replace(st_bias_horizons,",","")
 
-scalar sc_forecast_horizons_n = @wcount(st_forecast_horizons)
-scalar sc_graph_horizons_n = @wcount(st_graph_horizons)
+scalar sc_horizons_metrics_n = @wcount(st_horizons_metrics)
+scalar sc_horizons_graph_n = @wcount(st_horizons_graph)
 scalar sc_bias_horizons_n = @wcount(st_bias_horizons)
 
 ' 4. Perceentage error default
@@ -483,13 +483,14 @@ else
 	
 	%baseline_alias = @word(st_scenarios,1)
 
-'	if @upper(st_include_original)="T" then
-'		for %s {st_scenarios}
-'			if @isobject(st_base_var + "_"+ %s)=0 then
+	if @upper(st_include_original)="T" then
+		for %s {st_scenarios}
+			if @isobject(st_base_var + "_"+ %s)=0 then
+				st_include_original = "f"
 '				series {st_base_var}_{%s} = na
-'			endif
-'		next
-'	endif
+			endif
+		next
+	endif
 
 endif
 
@@ -2152,9 +2153,9 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples,string %sub_performance_metrics, string %sub_forecast_dep_var, string %sub_include_growth_rate, string %sub_forecast_horizons)
+subroutine performance_metrics(string %sub_EqVar,  string %sub_master_mnemonic, scalar !sub_forecastp_n, string %sub_tfirst, string %sub_tlast, string %subsamples,string %sub_performance_metrics, string %sub_forecast_dep_var, string %sub_include_growth_rate, string %sub_horizons_metrics)
 
-!sub_forecast_horizons_n = @wcount(%sub_forecast_horizons)
+!sub_horizons_metrics_n = @wcount(%sub_horizons_metrics)
 
 '1 Creating information objects if they do not exist
 if @wcount(%subsamples)>0 then
@@ -2178,15 +2179,15 @@ else
 endif
 
 ' 3. Adjusting set of forecast horizons	
-call forecast_horizon_adjust(!sub_forecastp_n,%sub_forecast_horizons)
+call forecast_horizon_adjust(!sub_forecastp_n,%sub_horizons_metrics)
 
 ' 4. Creating performance vectors
 call performance_vectors("v_"+ %sub_EqVar, %sub_performance_metrics,%sub_include_growth_rate)
 
 ' 5. Calculating performance metrics
-for !flength_id = 1 to !sub_forecast_horizons_n
+for !flength_id = 1 to !sub_horizons_metrics_n
 	
-	!flength = @val(@word(%sub_forecast_horizons,!flength_id))
+	!flength = @val(@word(%sub_horizons_metrics,!flength_id))
 	
 	' Creating performance vectors
 	call fe_vectors("v_"+ %sub_EqVar,!sub_forecastp_n,%sub_tlast, !flength,%sub_include_growth_rate)
@@ -2197,49 +2198,49 @@ for !flength_id = 1 to !sub_forecast_horizons_n
 next
 
 ' 6. Creating table
-call metrics_table(%sub_performance_metrics, %sub_forecast_horizons)
+call metrics_table(%sub_performance_metrics, %sub_horizons_metrics)
 
 endsub
 
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_forecast_horizons)
+subroutine forecast_horizon_adjust(scalar !sub_forecastp_n, string %sub_horizons_metrics)
 
 !forecast_horizon_adjust = 0
 
-for !flength_id = 1 to !sub_forecast_horizons_n
-	!flength = @val(@word(%sub_forecast_horizons,!flength_id))
+for !flength_id = 1 to !sub_horizons_metrics_n
+	!flength = @val(@word(%sub_horizons_metrics,!flength_id))
 
 	if !sub_forecastp_n-!flength +1<=0 then
 
 		!forecast_horizon_adjust = 1
-	 	!sub_forecast_horizons_n = !flength_id-1
+	 	!sub_horizons_metrics_n = !flength_id-1
 		exitloop		
 	endif
 next
 
 if !forecast_horizon_adjust = 1 then
-	%sub_forecast_horizons_o = %sub_forecast_horizons
+	%sub_horizons_metrics_o = %sub_horizons_metrics
 
-	if !sub_forecast_horizons_n = 0 then
+	if !sub_horizons_metrics_n = 0 then
 		@uiprompt("There are no correct forecast horizons for model " + %alias + ". The forecast horizon was set to 1.")
-		!sub_forecast_horizons_n =1
+		!sub_horizons_metrics_n =1
 
-		%sub_forecast_horizons = "1"
+		%sub_horizons_metrics = "1"
 	else
 
-		%sub_forecast_horizons = ""
+		%sub_horizons_metrics = ""
 
-		for !flength_id = 1 to !sub_forecast_horizons_n
-			%sub_forecast_horizons= %sub_forecast_horizons + @word(%sub_forecast_horizons_o,!flength_id) + " "
+		for !flength_id = 1 to !sub_horizons_metrics_n
+			%sub_horizons_metrics= %sub_horizons_metrics + @word(%sub_horizons_metrics_o,!flength_id) + " "
 		next
 	endif
 
-	if @isobject("st_forecast_horizons") then
-		delete(noerr) st_forecast_horizons_o
-		rename st_forecast_horizons st_forecast_horizons_o
-		 st_forecast_horizons = %sub_forecast_horizons
+	if @isobject("st_horizons_metrics") then
+		delete(noerr) st_horizons_metrics_o
+		rename st_horizons_metrics st_horizons_metrics_o
+		 st_horizons_metrics = %sub_horizons_metrics
 	endif 
 endif
 
@@ -2252,20 +2253,20 @@ subroutine performance_vectors(string %sub_vector_name_prefix, string %sub_perfo
 for %pm {%sub_performance_metrics} 
 	
 	%{%pm}_vector = %sub_vector_name_prefix + "_" + %pm
-	vector(!sub_forecast_horizons_n) {%{%pm}_vector} = na
+	vector(!sub_horizons_metrics_n) {%{%pm}_vector} = na
 	
 	%intermediate_objects = %intermediate_objects +  %{%pm}_vector + " "
 	
 	if @upper(%sub_include_growth_rate)="T" then
 		%{%pm}_vector_growth = %sub_vector_name_prefix + "_"+ %pm  "_growth"
-		vector(!sub_forecast_horizons_n) {%{%pm}_vector_growth} = na
+		vector(!sub_horizons_metrics_n) {%{%pm}_vector_growth} = na
 		
 		%intermediate_objects = %intermediate_objects +  %{%pm}_vector_growth + " "
 	endif
 	
 	for !SubSample = 1 to sc_subsample_count
 		%{%pm}_vector_ss{!SubSample} = %sub_vector_name_prefix + "_" + %pm + "_ss" + @str(!SubSample) 
-		vector(!sub_forecast_horizons_n) {%{%pm}_vector_ss{!SubSample}} = na
+		vector(!sub_horizons_metrics_n) {%{%pm}_vector_ss{!SubSample}} = na
 		
 		%intermediate_objects = %intermediate_objects +  %{%pm}_vector_ss{!SubSample} + " "
 	next	
@@ -2395,7 +2396,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine metrics_table(string %sub_performance_metrics, string %sub_forecast_horizons)
+subroutine metrics_table(string %sub_performance_metrics, string %sub_horizons_metrics)
 
 ' 1  Creating table
 delete(noerr) tb_performance_metrics
@@ -2414,15 +2415,15 @@ tb_performance_metrics(3+@wcount(%sub_performance_metrics)+1,1) = "#"
 
 tb_performance_metrics(1,2) = "Forecast horizons (# of steps ahead)"
 
-for !h = 1 to !sub_forecast_horizons_n
+for !h = 1 to !sub_horizons_metrics_n
 	
-	%h = @word(%sub_forecast_horizons,!h)
+	%h = @word(%sub_horizons_metrics,!h)
 	tb_performance_metrics(2,1+!h) = @upper(%h)		
 next
 
-tb_performance_metrics(2,1+!sub_forecast_horizons_n+1) = "Avg." 
+tb_performance_metrics(2,1+!sub_horizons_metrics_n+1) = "Avg." 
 
-!last_col = !sub_forecast_horizons_n+2
+!last_col = !sub_horizons_metrics_n+2
 tb_performance_metrics.setlines(3,1,3,{!last_col}) +d
 tb_performance_metrics.setlines(1,2,1,{!last_col}) +b
 
@@ -2435,7 +2436,7 @@ for !pm = 1 to @wcount(%sub_performance_metrics)
 
 	!sum = 0 
 	!horizons_count = 0
-	for !h = 1 to !sub_forecast_horizons_n
+	for !h = 1 to !sub_horizons_metrics_n
 
 		!value = {%{%pm}_vector}(!h)
 		call get_formated_value(!value,"metric_value")
@@ -2449,12 +2450,12 @@ for !pm = 1 to @wcount(%sub_performance_metrics)
 
 	!average = !sum/!horizons_count
 	call get_formated_value(!average,"metric_average")
-	tb_performance_metrics(3+!pm,1+!sub_forecast_horizons_n+1) = %metric_average
+	tb_performance_metrics(3+!pm,1+!sub_horizons_metrics_n+1) = %metric_average
 	
 next
 
-for !h = 1 to !sub_forecast_horizons_n
-	%h = 	 @word(%sub_forecast_horizons,!h)
+for !h = 1 to !sub_horizons_metrics_n
+	%h = 	 @word(%sub_horizons_metrics,!h)
 	tb_performance_metrics(3+@wcount(%sub_performance_metrics)+1,1+!h) = @str({%fe_vector_name_body}_h{%h}.@rows,"f.0")
 next
 
@@ -2487,7 +2488,7 @@ if sc_subsample_count>0 then
 		
 			!sum = 0 
 			!horizons_count = 0
-			for !h = 1 to !sub_forecast_horizons_n
+			for !h = 1 to !sub_horizons_metrics_n
 
 				!value = {%{%pm}_vector_ss{!SubSample}}(!h)
 				call get_formated_value(!value,"metric_value")
@@ -2503,15 +2504,15 @@ if sc_subsample_count>0 then
 				!average = !sum/!horizons_count
 				call get_formated_value(!average,"metric_average")
 	
-				tb_performance_metrics(!row,1+!sub_forecast_horizons_n+1) = %metric_average
+				tb_performance_metrics(!row,1+!sub_horizons_metrics_n+1) = %metric_average
 			endif
 
 		next	
 		
 		tb_performance_metrics(!heading_row+@wcount(%sub_performance_metrics)+1,1) = "#"
 		
-		for !h = 1 to !sub_forecast_horizons_n
-			%h = 	 @word(%sub_forecast_horizons,!h)
+		for !h = 1 to !sub_horizons_metrics_n
+			%h = 	 @word(%sub_horizons_metrics,!h)
 			'v.@droprow(@emult(@eneq(v, v), @ranks(@ones(@rows(v)), "a", "i"))) - removing NAs
 
 			if @isobject(%fe_vector_name_body + "_ss"+ @str(!subsample) + "_h"+ %h) then
@@ -2626,9 +2627,9 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 	
 	'Creating graphs
 	
-	for !flength_id = 1 to sc_graph_horizons_n
+	for !flength_id = 1 to sc_horizons_graph_n
 	
-		!flength = @val(@word(st_graph_horizons,!flength_id))
+		!flength = @val(@word(st_horizons_graph,!flength_id))
 
 		call forecast_graphs_summary("s_history_series",%sub_EqVar + "_f{fstart}",!flength,%sub_tfirst, %sub_tlast,st_transformation,%sub_graph_sample,st_graph_benchmark,st_index_period,st_graph_add_backtest,st_forecasted_ivariables) 
 		copy(o) gp_forecasts_all gp_forecasts_all_h{!flength}
@@ -3846,9 +3847,9 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 
 	%h_include_list = ""
 
-	for !h = 1 to sc_graph_horizons_n
+	for !h = 1 to sc_horizons_graph_n
 		
-		%h = @word(st_graph_horizons,!h)
+		%h = @word(st_horizons_graph,!h)
 
 		if @isobject("gp_forecasts_all_h" + %h) then
 			sp_spec_evaluation.insert(name=f_h{%h}) gp_forecasts_all_h{%h}
@@ -4675,8 +4676,8 @@ else
 	%object_list = ""
 endif
 
-for !fh = 1 to sc_graph_horizons_n
-	%fh = @word(st_graph_horizons,!fh)
+for !fh = 1 to sc_horizons_graph_n
+	%fh = @word(st_horizons_graph,!fh)
 	%object_list = %object_list + " " + "gp_forecasts_all_h" + %fh
 next
 
@@ -4797,7 +4798,7 @@ endif
 
 ' 4. Cleaning up other objects
 if @upper(st_keep_objects)="F" and sc_spec_count=1 then
-	for %h {st_graph_horizons}
+	for %h {st_horizons_graph}
 		delete(noerr) gp_forecasts_all_h{%h}
 	next
 
@@ -4969,8 +4970,8 @@ spool sp_forecast_graphs
 ' Summary
 if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 	
-	for !flength_id = 1 to sc_graph_horizons_n
-		%fh = @word(st_graph_horizons,!flength_id)
+	for !flength_id = 1 to sc_horizons_graph_n
+		%fh = @word(st_horizons_graph,!flength_id)
 		
 		delete(noerr) sp_forecast_graphs_{%fh}
 		spool sp_forecast_graphs_{%fh}
@@ -5000,7 +5001,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 	%obj_name =  "All forecast graphs" 
 	%obj_desc = "- blue with squares = actual historical series \n - dashed without symbol = individual forecasts \n - other solid = user-included series"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	%first_spool = "f_" + @word(st_graph_horizons,1)
+	%first_spool = "f_" + @word(st_horizons_graph,1)
 	sp_forecast_graphs.comment {%first_spool}  %comment
 
 endif
@@ -5340,16 +5341,16 @@ table tb_{%sub_metric}
 tb_{%sub_metric}(2,1) = "Specification"
 tb_{%sub_metric}(1,2) = "Forecast horizons (# of steps ahead)"
 
-for !h = 1 to sc_forecast_horizons_n
+for !h = 1 to sc_horizons_metrics_n
 	
-	%h = @word(st_forecast_horizons,!h)
+	%h = @word(st_horizons_metrics,!h)
 	tb_{%sub_metric}(2,1+!h) = @upper(%h)		
 next
 
-tb_{%sub_metric}(2,1+sc_forecast_horizons_n+1) = "Avg."
+tb_{%sub_metric}(2,1+sc_horizons_metrics_n+1) = "Avg."
 
 
-!last_col = sc_forecast_horizons_n+2
+!last_col = sc_horizons_metrics_n+2
 !last_row = sc_spec_count+3
 tb_{%sub_metric}(!last_row,1) = ""	
 tb_{%sub_metric}.setlines(2,1,!last_row,1) +r
@@ -5377,14 +5378,14 @@ next
 for !spec_id = 1 to sc_spec_count
 	call spec_alias
 	
-	for !fh = 1 to sc_forecast_horizons_n+1 
+	for !fh = 1 to sc_horizons_metrics_n+1 
 		tb_{%sub_metric}(3+!spec_id,1+!fh) = tb_performance_metrics_{st_alias}(!sub_source_row,1+!fh) 
 	next
 next
 
 ' Color coding
 !last_row = 3+sc_spec_count
-!last_col = sc_forecast_horizons_n+2
+!last_col = sc_horizons_metrics_n+2
 !scale_n = @ceiling(sc_spec_count/(3*2))
 
 if @upper(%sub_metric)="BIAS" then
@@ -5726,6 +5727,7 @@ delete(noerr) gp_csf_mslevel_{%s}
 smpl {st_tfirst_sgraph} {st_tlast_scenarios}
 graph gp_csf_mslevel_{%s}.line  {%graph_string_level}
 
+
 call mssg_graph_format("gp_csf_mslevel_" + %s, %sub_include_baseline,%sub_include_original,%sub_use_names)
 
 ' 3. Creating transformation graph
@@ -5826,7 +5828,6 @@ endif
 for !member = 1 to !members
 	%graph_members = %graph_members + gr_csf{%s}.@seriesname(!member_count+!member) + " " 
 next
-
 
 endsub
 
