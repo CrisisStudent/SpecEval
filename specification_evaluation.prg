@@ -45,10 +45,10 @@ if !dogui=1 then
 	' 2.1 Basic settings
 
 	' Defaults
-	string st_exec_list_user = "medium"
+	string st_exec_list_user = "normal"
 	!forecast_type = 1
 	string st_horizons_metrics = "1 2 4 8 12"
-	string st_specification_list = _this.@name
+	string st_specification_list = _this.@name + "*"
 	string st_scenarios = "" 
 	string st_ignore_errors = "f"	
 	
@@ -138,7 +138,7 @@ if !dogui=1 then
 	string st_model_name_add = ""
 	string st_forecasted_ivariables = ""
 	!scenario_dataload = 1
-
+	string st_base_var = ""
 
 	if !advanced_options = 1 then
 
@@ -171,7 +171,8 @@ if !dogui=1 then
 		"edit",st_eq_list_add,"Enter list of additional equations/identities for RHS variables", _
 		"edit",st_model_name_add,"Enter name of model object which contains equations/identitie for RHS variables", _
 		"edit",st_forecasted_ivariables,"Enter list of independent variables fowr which forecasts should be used ", _ 
-		"check",!scenario_dataload,"Load missing scenario data from databases")
+		"check",!scenario_dataload,"Load missing scenario data from databases", _
+		"edit",st_base_var,"Enter base variable mnemonic (not applicable for equations)")
 
 		'"check",!include_growth_rate,"Do you want to include growth rate results?", _
 
@@ -223,7 +224,7 @@ if !dogui=1 then
 	!keep_equations = 0
 	!keep_information = 0
 	!keep_settings = 0
-	!save_output = 5
+	!save_output = 4
 
 	if !store_settings = 1 then
 		
@@ -458,7 +459,7 @@ if @upper(st_custom_reestimation)="T" then
 	tx_include_list.append include {%custom_reest_file_path}
 endif
 
-if @wcount(st_scenarios)>0  and @upper(st_scenario_dataload)="T" then
+if (@wcount(st_scenarios)>0  or @instr(@upper(st_exec_list_user),"REPORT")>0) and @upper(st_scenario_dataload)="T" then
 	%dataload_file_path =  """" + @runpath + "scenario_dataload.prg"+ """"
 
 	if @fileexist(%dataload_file_path)=0 then 

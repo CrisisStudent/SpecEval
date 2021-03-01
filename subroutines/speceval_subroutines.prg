@@ -1,8 +1,10 @@
 ' List of subroutines
-'	1) subroutine settings_parameters
+'	0) subroutine settings_parameters
+'		- subroutine exec_list_implementation
 '		- subroutine base_var_ident
 '		- subroutine SubSamples_info_objects(string %subsamples)
 
+'	1) subroutine cleaning_up_objects
 '	2) subroutine get_spec_info
 
 '	3) subroutine get_spec_add_info
@@ -79,9 +81,7 @@
 
 '	10) subroutine results_aliasing(string %sub_alias)
 
-'	11) subroutine cleaning_up_objects
-
-'	12) subroutine evaluation_multireport
+'	11) subroutine evaluation_multireport
 '		a) subroutine insert_specs(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
 '		b) subroutine insert_spec(string %sub_spool_name,string %sub_object_name, string %sub_use_names)
 '		c) subroutine performance_tables_multi(string %sub_metric, scalar !sub_source_row, string %sub_table_name)
@@ -89,7 +89,7 @@
 '		e) subroutine colorcode_execution(string %sub_tbname, string %sub_rlist,string %sub_clist, string %sub_absolute_value)
 '		f) subroutine scen_graph_multispec(st_use_names)
 
-'	13) subroutine speceval_store
+'	12) subroutine speceval_store
 
 
 
@@ -99,138 +99,15 @@
 subroutine settings_parameters
 
 ' 1. Execution settings
-
-%full_component_list = " FORECASTS METRICS GRAPHS SCENARIOS DECOMPOSITION REG_OUTPUT STABILITY "
-
-%graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
-%scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS SCENARIOS_MULTISPEC"
-
-%multiple_components_list = "ALL SHORT MEDIUM LONG REPORT"
-
-%complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %multiple_components_list
-
-' Default 
-string st_exec_list = ""
-
-if @isempty(st_exec_list_user) then
-	st_exec_list = "medium"
-endif 
-
-' Creating final component and remove lists
-
-if @isempty(st_exec_list_user)=0 then
-	for %c {st_exec_list_user}
-		if @left(%c,1)<>"-" then
-			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
-				st_exec_list = st_exec_list + %c + " "
-			endif
-		else
-			%c = @mid(%c,2)
-		
-			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
-				%remove_list = %remove_list + %c + " "
-			endif
-		endif
-	next
-endif	
-
-' Dealing with length options
-if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
-	st_exec_list = @replace(@upper(st_exec_list),"SHORT","FORECASTS METRICS GRAPHS_SUMMARY REG_OUTPUT")
-
-	if @isempty(st_horizons_metrics) then
-		string st_horizons_metrics = "8 24"
-		!horizons_metrics_user = 0 
-	endif
-endif
-
-if @instr(" " + @upper(st_exec_list) + " "," MEDIUM ") then
-	st_exec_list = @replace(@upper(st_exec_list),"MEDIUM","FORECASTS METRICS GRAPHS_SUMMARY GRAPHS_SS SCENARIOS_ALL REG_OUTPUT")
-
-'	if @isempty(st_horizons_metrics) then
-'		string st_horizons_metrics = "8 24"
-'		!horizons_metrics_user = 0 
-'	endif
-endif
-
-if @instr(" " + @upper(st_exec_list) + " "," LONG ") then
-	st_exec_list = @replace(@upper(st_exec_list),"LONG","ALL")
-
-	if @isempty(st_horizons_metrics) then
-		string st_horizons_metrics = "2 4 8 16 24"
-		!horizons_metrics_user = 0 
-	endif
-
-	if @isempty(st_performance_metrics) then
-		st_performance_metrics = "rmse mae bias"
-	endif
-endif
-
-if @instr(" " + @upper(st_exec_list) + " "," REPORT ") then
-	st_exec_list = @replace(@upper(st_exec_list),"REPORT","REG_OUTPUT FORECASTS METRICS GRAPHS_SUMMARY SCENARIOS_MULTISPEC")
-
-	st_save_output = "t"
-	st_include_descriptions = "t"
-endif
-
-'Dealing with all option
-if @instr(" " + @upper(st_exec_list) + " "," ALL ") then
-	st_exec_list = @replace(@upper(st_exec_list),"ALL",%full_component_list)
-endif
-
-' First removal of components
-if @wcount(%remove_list)>0 then
-	for %c {%remove_list}
-		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
-			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
-		endif
-	next
-endif
-
-' Replacing aggregate options
-if @instr(" " + @upper(st_exec_list)," GRAPHS ") then
-	st_exec_list = @replace(@upper(st_exec_list)," GRAPHS "," " + %graphs_component_list + " ")
-endif
-
-if @instr(" " + @upper(st_exec_list)," SCENARIOS ") then
-	st_exec_list = @replace(@upper(st_exec_list)," SCENARIOS "," " + %scenarios_component_list + " ")
-endif
-
-if @instr(" " + @upper(st_exec_list)," SCENARIOS_INDIVIDUAL ") or @instr(" " + @upper(st_exec_list)," SCENARIOS_ALL ") then
-	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_ALL","SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS")
-	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL","SCENARIOS_INDIVIDUAL SCENARIOS_LEVEL SCENARIOS_TRANS")
-endif
-
-if @instr(" " + @upper(%remove_list) + " "," GRAPHS ") then
-	%remove_list = @replace(" " + @upper(%remove_list) + " "," GRAPHS "," " + %graphs_component_list + " ")
-endif
-
-if @instr(" " + @upper(%remove_list) + " "," SCENARIOS ") then
-	%remove_list = @replace(" " + @upper(%remove_list)+ " "," SCENARIOS "," " + %scenarios_component_list + " ")
-endif
-
-' Removing duplicates
-st_exec_list = @wunique(st_exec_list)
-
-' Second removal of components
-if @wcount(%remove_list)>0 then
-	for %c {%remove_list}
-		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
-			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
-		endif
-	next
-endif
-
-' Removing items not applicable for identities
-if _this.@type = "STRING" then
-	for %c reg_output stability
-		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
-			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
-		endif
-	next
-endif
+call  exec_list_implementation
 
 ' 2. Equation information
+
+'Base variable
+if @isempty("st_base_var")=0 then
+	%spec_name = _this.@name
+	call  base_var_ident(%spec_name)
+endif
 
 ' Processing equation lists
 if @instr(@upper(st_specification_list),"*")>0 then
@@ -362,7 +239,7 @@ next
 ' Horizons 
 !horizons_metrics_user = 1
 if @isempty(st_horizons_metrics) then
-	string st_horizons_metrics = "8 24"
+	string st_horizons_metrics = "1 4 8 12 24"
 	!horizons_metrics_user = 0 
 endif
 
@@ -391,11 +268,7 @@ scalar sc_bias_horizons_n = @wcount(st_bias_horizons)
 
 ' 4. Perceentage error default
 if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
-	
-	if @isempty(st_base_var) then
-		string st_spec_name = _this.@name
-		call  base_var_ident(st_spec_name)
-	endif
+
 	!trend_default = 0
 
 	series s_depvar= @d({st_base_var})
@@ -491,7 +364,178 @@ else
 			endif
 		next
 	endif
+endif
 
+endsub
+
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine exec_list_implementation
+
+%full_component_list = " FORECASTS METRICS GRAPHS SCENARIOS DECOMPOSITION REG_OUTPUT STABILITY "
+
+%graphs_component_list = "GRAPHS_SUMMARY GRAPHS_SS GRAPHS_BIAS"
+%scenarios_component_list = "SCENARIOS_INDIVIDUAL SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS SCENARIOS_MULTISPEC"
+
+%multiple_components_list = "ALL SHORT NORMAL LONG REPORT"
+
+%complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %multiple_components_list
+
+' Default 
+string st_exec_list = ""
+
+if @isempty(st_exec_list_user) then
+	st_exec_list = "normal"
+endif 
+
+' Creating final component and remove lists
+
+if @isempty(st_exec_list_user)=0 then
+	for %c {st_exec_list_user}
+		if @left(%c,1)<>"-" then
+			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
+				st_exec_list = st_exec_list + %c + " "
+			endif
+		else
+			%c = @mid(%c,2)
+		
+			if @instr(" "+ @upper(%complete_component_list) + " "," " +@upper(%c) + " ")>0 then   
+				%remove_list = %remove_list + %c + " "
+			endif
+		endif
+	next
+endif	
+
+' Dealing with length options
+if @instr(" " + @upper(st_exec_list) + " "," SHORT ") then
+	st_exec_list = @replace(@upper(st_exec_list),"SHORT","FORECASTS METRICS GRAPHS_SUMMARY REG_OUTPUT")
+
+	if @isempty(st_horizons_metrics) then
+		string st_horizons_metrics = "4 8 24"
+		!horizons_metrics_user = 0 
+	endif
+
+	if @isempty(st_horizons_graph) then
+		string st_horizons_metrics = "12"
+		!horizons_metrics_user = 0 
+	endif
+endif
+
+if @instr(" " + @upper(st_exec_list) + " "," NORMAL ") then
+	st_exec_list = @replace(@upper(st_exec_list),"NORMAL","FORECASTS METRICS GRAPHS_SUMMARY GRAPHS_SS SCENARIOS_ALL REG_OUTPUT")
+endif
+
+if @instr(" " + @upper(st_exec_list) + " "," LONG ") then
+	st_exec_list = @replace(@upper(st_exec_list),"LONG","ALL")
+
+	if @isempty(st_horizons_metrics) then
+		string st_horizons_metrics = "1 2 4 8 16 24"
+		!horizons_metrics_user = 0 
+	endif
+
+	if @isempty(st_horizons_graph) then
+		string st_horizons_metrics = "4 8 16 24"
+	endif
+
+	if @isempty(st_performance_metrics) then
+		st_performance_metrics = "rmse mae bias"
+	endif
+endif
+
+if @instr(" " + @upper(st_exec_list) + " "," REPORT ") then
+	st_exec_list = @replace(@upper(st_exec_list),"REPORT","FORECASTS METRICS GRAPHS_SUMMARY SCENARIOS_ALL SCENARIOS_MULTISPEC REG_OUTPUT")
+	%remove_list = %remove_list + " SCENARIOS_TRANS"
+
+	if @isempty(st_horizons_metrics) then
+		string st_horizons_metrics = "1 2 4 8 12 20"
+		!horizons_metrics_user = 0 
+	endif
+
+	if @isempty(st_horizons_graph) then
+		string st_horizons_graph = "12"
+	endif
+
+	if @isempty(st_tfirst_graph_user) then
+		string st_tfirst_graph_user = "2000q1"
+	endif
+
+	if @isempty(st_scenarios) then
+		string st_scenarios = "bl s4"
+	endif
+
+	if @isempty(st_tfirst_sgraph) then
+		string st_tfirst_sgraph = "2005q1"
+	endif
+
+	if @isempty(st_tlast_scenarios) then
+		string st_tlast_scenarios = "2040q4"
+	endif
+
+	if @upper(st_save_output)="F" then
+		st_save_output = "t"
+	endif
+
+	if @upper(st_include_descriptions)="F" then
+		st_include_descriptions = "t"
+	endif
+endif
+
+'Dealing with all option
+if @instr(" " + @upper(st_exec_list) + " "," ALL ") then
+	st_exec_list = @replace(@upper(st_exec_list),"ALL",%full_component_list)
+endif
+
+' First removal of components
+if @wcount(%remove_list)>0 then
+	for %c {%remove_list}
+		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
+			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
+		endif
+	next
+endif
+
+' Replacing aggregate options
+if @instr(" " + @upper(st_exec_list)," GRAPHS ") then
+	st_exec_list = @replace(@upper(st_exec_list)," GRAPHS "," " + %graphs_component_list + " ")
+endif
+
+if @instr(" " + @upper(st_exec_list)," SCENARIOS ") then
+	st_exec_list = @replace(@upper(st_exec_list)," SCENARIOS "," " + %scenarios_component_list + " ")
+endif
+
+if @instr(" " + @upper(st_exec_list)," SCENARIOS_INDIVIDUAL ") or @instr(" " + @upper(st_exec_list)," SCENARIOS_ALL ") then
+	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_ALL","SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS")
+	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL","SCENARIOS_INDIVIDUAL SCENARIOS_LEVEL SCENARIOS_TRANS")
+endif
+
+if @instr(" " + @upper(%remove_list) + " "," GRAPHS ") then
+	%remove_list = @replace(" " + @upper(%remove_list) + " "," GRAPHS "," " + %graphs_component_list + " ")
+endif
+
+if @instr(" " + @upper(%remove_list) + " "," SCENARIOS ") then
+	%remove_list = @replace(" " + @upper(%remove_list)+ " "," SCENARIOS "," " + %scenarios_component_list + " ")
+endif
+
+' Removing duplicates
+st_exec_list = @wunique(st_exec_list)
+
+' Second removal of components
+if @wcount(%remove_list)>0 then
+	for %c {%remove_list}
+		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
+			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
+		endif
+	next
+endif
+
+' Removing items not applicable for identities
+if _this.@type = "STRING" then
+	for %c reg_output stability
+		if @instr(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " ") then	
+			st_exec_list = @replace(" " + @upper(st_exec_list) + " "," "+ @upper(%c) + " "," ")
+		endif
+	next
 endif
 
 endsub
@@ -547,6 +591,92 @@ endsub
 
 ' ##################################################################################################################
 
+
+
+
+' ##################################################################################################################
+
+subroutine cleaning_up_objects(string %sub_spec_name)
+
+' 1. Cleaning up intermediate objects
+if @upper(st_keep_objects)="F" then
+	delete(noerr) {%intermediate_objects}
+endif
+
+' 2. Cleaning up forecasts
+if @upper(st_keep_forecasts)="F" then				
+	for !fp = 1 to @obsrange
+		%fstart = @otod(!fp)
+		delete(noerr) {st_base_var}_f{%fstart}
+	next
+
+	if @isempty(st_scenarios)=0 then
+		for %s {st_scenarios}
+			delete(noerr) {st_base_var}_csf{%s}
+		next
+	endif
+endif
+
+' 3. Cleaning up equations
+if @upper(st_keep_equations)="F" then				
+	for !fp = 1 to @obsrange
+		delete(noerr) {%sub_spec_name}_reest{!fp}
+	next
+endif	
+
+' 3. Cleaning up process information objects
+if @upper(st_keep_information)="F" then
+	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{%sub_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
+	
+	if @isobject("st_eq_list_add_final") then
+		for %eq {st_eq_list_add_final}
+			delete(noerr) tb_sb_{%eq} 		
+		next
+	endif
+	
+'	if  !spec_id=sc_spec_count then
+'		delete(noerr) st_percentage_error
+'	endif
+endif
+
+' 4. Cleaning up other objects
+if @upper(st_keep_objects)="F" and sc_spec_count=1 then
+	for %h {st_horizons_graph}
+		delete(noerr) gp_forecasts_all_h{%h}
+	next
+
+	for %h {st_bias_horizons}
+		delete(noerr) gp_forecast_bias_h{%h}
+	next
+
+	for !ss = 1 to sc_subsample_count
+		delete(noerr) gp_forecast_subsample{!ss}
+		delete(noerr) gp_forecast_subsample{!ss}_fd
+	next	
+
+	if @isempty(st_scenarios)=0 then
+		for %s {st_scenarios} all
+			delete(noerr) gp_csf_*_{%s}
+		next
+	endif
+	 	
+	delete(noerr)   tb_performance_metrics
+endif
+
+delete(noerr) gr_regs s_history_series
+
+if @isobject(%sub_spec_name) then
+	delete(noerr) gr_{%sub_spec_name}_regs
+endif 
+
+' Restoring
+if @upper(%restore_auto_selection)="T" then
+	st_auto_selection = "T"
+endif
+ 
+endsub
+
+' ##################################################################################################################
 
 
 
@@ -4753,93 +4883,6 @@ endsub
 
 ' ##################################################################################################################
 
-subroutine cleaning_up_objects
-
-' 1. Cleaning up intermediate objects
-if @upper(st_keep_objects)="F" then
-	delete(noerr) {%intermediate_objects}
-endif
-
-' 2. Cleaning up forecasts
-if @upper(st_keep_forecasts)="F" then				
-	for !fp = 1 to @obsrange
-		%fstart = @otod(!fp)
-		delete(noerr) {st_base_var}_f{%fstart}
-	next
-
-	if @isempty(st_scenarios)=0 then
-		for %s {st_scenarios}
-			delete(noerr) {st_base_var}_csf{%s}
-		next
-	endif
-endif
-
-' 3. Cleaning up equations
-if @upper(st_keep_equations)="F" then				
-	for !fp = 1 to @obsrange
-		delete(noerr) {st_spec_name}_reest{!fp}
-	next
-endif	
-
-' 3. Cleaning up process information objects
-if @upper(st_keep_information)="F" then
-	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{st_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
-	
-	if @isobject("st_eq_list_add_final") then
-		for %eq {st_eq_list_add_final}
-			delete(noerr) tb_sb_{%eq} 		
-		next
-	endif
-	
-'	if  !spec_id=sc_spec_count then
-'		delete(noerr) st_percentage_error
-'	endif
-endif
-
-' 4. Cleaning up other objects
-if @upper(st_keep_objects)="F" and sc_spec_count=1 then
-	for %h {st_horizons_graph}
-		delete(noerr) gp_forecasts_all_h{%h}
-	next
-
-	for %h {st_bias_horizons}
-		delete(noerr) gp_forecast_bias_h{%h}
-	next
-
-	for !ss = 1 to sc_subsample_count
-		delete(noerr) gp_forecast_subsample{!ss}
-		delete(noerr) gp_forecast_subsample{!ss}_fd
-	next	
-
-	if @isempty(st_scenarios)=0 then
-		for %s {st_scenarios} all
-			delete(noerr) gp_csf_*_{%s}
-		next
-	endif
-	 	
-	delete(noerr)   tb_performance_metrics
-endif
-
-delete(noerr) gr_regs s_history_series
-
-if @isobject("st_spec_name") then
-	delete(noerr) gr_{st_spec_name}_regs
-endif 
-
-' Restoring
-if @upper(%restore_auto_selection)="T" then
-	st_auto_selection = "T"
-endif
- 
-endsub
-
-' ##################################################################################################################
-
-
-
-
-' ##################################################################################################################
-
 subroutine evaluation_multireport
 
 ' 1. Individual reports aggregated
@@ -5732,71 +5775,73 @@ call mssg_graph_format("gp_csf_mslevel_" + %s, %sub_include_baseline,%sub_includ
 
 ' 3. Creating transformation graph
 
-%graph_string_trans = ""
-
-for !gm = 1 to @wcount(%graph_members)
-	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
-		if @upper(st_percentage_error)="T" then
-			%trans_description = "Growth rate"
-			%graph_string_trans = %graph_string_trans + "@pca(" + @word(%graph_members,!gm) +  ")"  + " "
-		else
-			%trans_description = "Differences"
-			%graph_string_trans = %graph_string_trans + "@d(" + @word(%graph_members,!gm) +  ")"  + " "
-		endif
-	endif
-
-	if @upper(%sub_transformation)="SPREAD" then
-		%trans_description = "Spread from " + st_graph_benchmark
-
-		if @isobject(st_graph_benchmark + "_" + %scenario) then
-			%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
-		else
-			%graph_benchmark_scen = st_graph_benchmark
-		endif
-
-		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "-" + %graph_benchmark_scen  + " "
-	endif
-
-	if @upper(%sub_transformation)="RATIO"  then
-		%trans_description = "Ratio to " + st_graph_benchmark
-
-		if @isobject(st_graph_benchmark + "_" + %scenario) then
-			%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
-		else
-			%graph_benchmark_scen = st_graph_benchmark
-		endif
-
-		%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "/" + %graph_benchmark_scen  + " "
-	endif
-
-	if @upper(%sub_transformation)="DEVIATION" and (@upper(%sub_scenario)=@upper(%baseline_alias))=0 and (@upper(st_include_baseline)="T" and !gm=1)=0 then
-
-		%gs = @word(%graph_members,!gm) 
-		%gs_baseline = @replace(@upper(%gs),@upper(%sub_scenario),%baseline_alias) 
-
-		if @upper(st_percentage_error)="T" then
-			%trans_description = "Deviation from baseline"
-			%graph_string_trans = %graph_string_trans + "(" + %gs+ "/" +%gs_baseline + "-1" + ")*100" + " "
-		else
-			%trans_description = "Difference from baseline"
-			%graph_string_trans = %graph_string_trans +%gs  + "-" + %gs_baseline + " "
-		endif
-	endif
-next
-
-if @isempty(%graph_string_trans)=0 then
-	delete(noerr) gp_csf_mstrans_{%s}
-	smpl {st_tfirst_sgraph} {st_tlast_scenarios}
-	graph gp_csf_mstrans_{%s}.line  {%graph_string_trans}
+if @instr(@upper(st_exec_list),"SCENARIOS_TRANS")>0 then
+	%graph_string_trans = ""
 	
-	if @upper(%sub_transformation)="DEVIATION"  then
-		call mssg_graph_format("gp_csf_mstrans_" + %s,"f",%sub_include_original,%sub_use_names)
-	else
-		call mssg_graph_format("gp_csf_mstrans_" + %s,%sub_include_baseline,%sub_include_original,%sub_use_names)
-	endif
-
-	if @upper(%sub_transformation)="LOG" then
-		gp_csf_mstrans_{%s}.axis(l) log
+	for !gm = 1 to @wcount(%graph_members)
+		if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
+			if @upper(st_percentage_error)="T" then
+				%trans_description = "Growth rate"
+				%graph_string_trans = %graph_string_trans + "@pca(" + @word(%graph_members,!gm) +  ")"  + " "
+			else
+				%trans_description = "Differences"
+				%graph_string_trans = %graph_string_trans + "@d(" + @word(%graph_members,!gm) +  ")"  + " "
+			endif
+		endif
+	
+		if @upper(%sub_transformation)="SPREAD" then
+			%trans_description = "Spread from " + st_graph_benchmark
+	
+			if @isobject(st_graph_benchmark + "_" + %scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
+	
+			%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "-" + %graph_benchmark_scen  + " "
+		endif
+	
+		if @upper(%sub_transformation)="RATIO"  then
+			%trans_description = "Ratio to " + st_graph_benchmark
+	
+			if @isobject(st_graph_benchmark + "_" + %scenario) then
+				%graph_benchmark_scen = st_graph_benchmark + "_" + %sub_scenario	
+			else
+				%graph_benchmark_scen = st_graph_benchmark
+			endif
+	
+			%graph_string_trans = %graph_string_trans + @word(%graph_members,!gm) + "/" + %graph_benchmark_scen  + " "
+		endif
+	
+		if @upper(%sub_transformation)="DEVIATION" and (@upper(%sub_scenario)=@upper(%baseline_alias))=0 and (@upper(st_include_baseline)="T" and !gm=1)=0 then
+	
+			%gs = @word(%graph_members,!gm) 
+			%gs_baseline = @replace(@upper(%gs),@upper(%sub_scenario),%baseline_alias) 
+	
+			if @upper(st_percentage_error)="T" then
+				%trans_description = "Deviation from baseline"
+				%graph_string_trans = %graph_string_trans + "(" + %gs+ "/" +%gs_baseline + "-1" + ")*100" + " "
+			else
+				%trans_description = "Difference from baseline"
+				%graph_string_trans = %graph_string_trans +%gs  + "-" + %gs_baseline + " "
+			endif
+		endif
+	next
+	
+	if @isempty(%graph_string_trans)=0 then
+		delete(noerr) gp_csf_mstrans_{%s}
+		smpl {st_tfirst_sgraph} {st_tlast_scenarios}
+		graph gp_csf_mstrans_{%s}.line  {%graph_string_trans}
+		
+		if @upper(%sub_transformation)="DEVIATION"  then
+			call mssg_graph_format("gp_csf_mstrans_" + %s,"f",%sub_include_original,%sub_use_names)
+		else
+			call mssg_graph_format("gp_csf_mstrans_" + %s,%sub_include_baseline,%sub_include_original,%sub_use_names)
+		endif
+	
+		if @upper(%sub_transformation)="LOG" then
+			gp_csf_mstrans_{%s}.axis(l) log
+		endif
 	endif
 endif
 
@@ -5809,12 +5854,15 @@ subroutine mssg_graph_members(string %sub_var,string %sub_scenario)
 %graph_members = ""
 
 ' Default forecasts
-if @upper(st_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
+if @upper(st_include_original)="T"and @upper(st_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
 	%graph_members = %graph_members + %sub_var + "_" + @word(st_scenarios,1) + " " 
 endif
 
 if @upper(st_include_original)="T" then
-	%graph_members = %graph_members + %sub_var + "_" + %sub_scenario + " " 
+	%scenario_series = %sub_var + "_" + %sub_scenario
+	if @isobject(%scenario_series) then
+		%graph_members = %graph_members + %scenario_series + " " 
+	endif
 endif
 
 ' checking number of left specifications
@@ -5840,7 +5888,7 @@ subroutine mssg_graph_format(string %sub_graph_name, string %sub_include_baselin
 
 !elem = 0
 
-if @upper(%sub_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
+if @upper(st_include_original)="T" and @upper(%sub_include_baseline)="T" and @upper(%s)<>@upper(@word(st_scenarios,1)) then
 	!elem = !elem + 1
 	{%sub_graph_name}.setelem(!elem) legend(Original baseline forecast) symbol(filledcircle) symbolsize(S) linepattern(solid) linecolor(blue)
 endif
@@ -5889,10 +5937,10 @@ subroutine speceval_store
  ' Name and mode
 if sc_spec_count=1 then
 	%output_file_name = st_spec_name + "_specification_evaluation"
-	%pdf_mode = "c"
+	%pdf_mode = "i"
 else
 	%output_file_name = st_base_var + "_specification_evaluation"
-	%pdf_mode = "c"
+	%pdf_mode = "i"
 endif
 
 ' Comments

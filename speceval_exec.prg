@@ -10,7 +10,8 @@ call settings_parameters
 
 for !spec_id = 1 to sc_spec_count
 
-	call cleaning_up_objects
+	statusline Cleaning up objects
+	call cleaning_up_objects(@word(st_specification_list,!spec_id))
 
 	statusline Specification information  ({!spec_id})
 	%intermediate_objects = ""
@@ -94,7 +95,7 @@ for !spec_id = 1 to sc_spec_count
 	
 	'Cleaning up
 	statusline Cleaning up ({st_spec_name})
-	call cleaning_up_objects
+	call cleaning_up_objects(@word(st_specification_list,!spec_id))
 
 	
 next
