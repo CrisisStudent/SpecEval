@@ -4175,6 +4175,8 @@ for !r = 1 to tb_reg_output.@rows
 	'next
 next
 
+!last_row = tb_reg_output.@rows
+
 ' Identifying p-value column
 !pvalue_column = 5
 for !c = 1 to  tb_reg_output.@cols
@@ -4234,7 +4236,38 @@ for !reg = 1 to  {%sub_equation_name}.@ncoef
 	next
 next
 
-' 5. Adjuting column length
+' 5. Inserting pre-column and adjusting column length
+
+' Insering pre-column
+tb_reg_output.insertcol(1) 1
+
+' Merging first two columns
+for !tr= 1 to !start_row-3
+	tb_reg_output(!tr,1) = tb_reg_output(!tr,2)
+	tb_reg_output.setmerge(!tr,1,!tr,7)
+	tb_reg_output.setjust(!tr,1,!tr,1) left
+next
+
+for !tr= !start_row-2 to  !start_row+{%sub_equation_name}.@ncoef
+	tb_reg_output(!tr,1) = tb_reg_output(!tr,2)
+	tb_reg_output.setmerge(!tr,1,!tr,2)
+	tb_reg_output.setjust(!tr,1,!tr,1) center
+next
+
+for !tr= !start_row+{%sub_equation_name}.@ncoef to !last_row
+	tb_reg_output(!tr,1) = tb_reg_output(!tr,2)
+	tb_reg_output(!tr,2) = tb_reg_output(!tr,3)
+	tb_reg_output.setmerge(!tr,2,!tr,3)
+	tb_reg_output.setjust(!tr,1,!tr,2) left
+next
+
+tb_reg_output.setlines(!start_row-3,1,!start_row-3,1) +d
+tb_reg_output.setlines(!start_row-1,1,!start_row-1,1) +d
+tb_reg_output.setlines(!start_row+{%sub_equation_name}.@ncoef,1,!start_row+{%sub_equation_name}.@ncoef,1) +d
+tb_reg_output.setlines(!last_row,1,!last_row,7) +d
+
+
+'Adjusting column length
 !max_length = 20
 for !reg = 1 to {%sub_equation_name}.@ncoef
 	!length = @length(tb_reg_output(!start_row+!reg-1,1))
@@ -4243,8 +4276,12 @@ for !reg = 1 to {%sub_equation_name}.@ncoef
 	endif
 next
 
-tb_reg_output.setwidth(1) !max_length
+tb_reg_output.setwidth(1) 20
 
+!col_length = !max_length-20+5
+tb_reg_output.setwidth(2) !col_length
+
+!length_cols2to7 = !col_length+50
 
 ' 6. Inputing variable descriptions
 
@@ -4256,7 +4293,7 @@ tb_reg_output(!heading_row,1) = "Variable"
 tb_reg_output(!heading_row,2) = "Description" 
 
 !next_row = !heading_row+1
-tb_reg_output.setlines(!next_row,1,!next_row,6) +d
+tb_reg_output.setlines(!next_row,1,!next_row,7) +d
 
 ' Variable list
 '	%sub_eq_spec = {%sub_equation_name}.@spec
@@ -4303,10 +4340,18 @@ endif
 delete(noerr) gr_eq_vars
 
 ' Inputting descriptions
+!max_length_evar = 0
+!max_length_desc = 0
+
 for !evar = 1 to @wcount(%eq_variables)
 	%evar = @word(%eq_variables,!evar)
 	
 	tb_reg_output(!heading_row+1+!evar,1) = %evar	
+
+	!length = @length(%evar)
+	if !length>!max_length_evar then
+		!max_length_evar = !length
+	endif
 
 	if @isobject("tb_variable_descriptions") then	
 		for !dr = 1 to tb_variable_descriptions.@rows
@@ -4318,13 +4363,30 @@ for !evar = 1 to @wcount(%eq_variables)
 		%var_desc = {%evar}.@attr("description")
 	endif
 
+	!length = @length(%var_desc)
+
+	if !length>!max_length_desc then
+		!max_length_desc = !length
+	endif
+
 	tb_reg_output(!heading_row+1+!evar,2) = %var_desc	
 
 next	
 
-!next_row = tb_reg_output.@rows+1
-tb_reg_output.setlines(!next_row,1,!next_row,6) +d
+'Additional formatting
 
+if !max_length_evar+5>20 then
+	!col_length = !max_length_evar+5
+	tb_reg_output.setwidth(A) !col_length
+endif
+
+if !max_length_desc+5>!length_cols2to7 then
+	!col_length = !max_length_desc+5-5*10
+	tb_reg_output.setwidth(B) !col_length
+endif
+
+!last_row = tb_reg_output.@rows+1
+tb_reg_output.setlines(!last_row,1,!last_row,7) +d
 
 ' Deleting if no description was inserted
 !description_inserted = 0
