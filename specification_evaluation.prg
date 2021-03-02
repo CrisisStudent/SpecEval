@@ -38,23 +38,44 @@ if @len(@option(1))>0 then
 	!dogui=@hasoption("prompt") 'if this is 0, we are NOT running through the GUI
 endif
 
-
 '2. Execute user dialog
 if !dogui=1 then
+
+	' 2.1 Loading GUI defaults from previous executuion, if available
+	if @isobject("tb_speceval_gui") and @isobject("st_load_gui_settings") then
+		if @upper(st_load_gui_settings)="T" then
+			for !tr = 2 to tb_speceval_gui.@rows
+ 				%sp = tb_speceval_gui(!tr,1)
+
+				if @left(@upper(%sp),2)="ST" then
+					string {%sp} =  tb_speceval_gui(!tr,2)
+				endif
+
+				if @left(@upper(%sp),1)="!" then
+					{%sp} =  @val(tb_speceval_gui(!tr,2))
+				endif					
+			next
+		endif
+	else
+		string st_load_gui_settings = "F"
+	endif
+
 	
 	' 2.1 Basic settings
 
 	' Defaults
-	string st_exec_list_user = "normal"
-	!forecast_type = 1
-	string st_horizons_metrics = "1 2 4 8 12"
-	string st_specification_list = _this.@name + "*"
-	string st_scenarios = "" 
-	string st_ignore_errors = "f"	
-	
-	!date_settings = 0
-	!advanced_options = 0
-	!store_settings = 0
+	if @upper(st_load_gui_settings)<>"T" then
+		string st_exec_list_user = "normal"
+		!forecast_type = 1
+		string st_horizons_metrics = "1 2 4 8 12"
+		string st_specification_list = _this.@name + "*"
+		string st_scenarios = "" 
+		string st_ignore_errors = "f"	
+		
+		!date_settings = 0
+		!advanced_options = 0
+		!store_settings = 0
+	endif
 		
 	'Basic settings dialog
 	!result = @uidialog("caption","Settings for forecast performance", _
@@ -82,14 +103,16 @@ if !dogui=1 then
 	' 2.2 Date settings
 
 	'Setting defaults
-	string st_tfirst_backtest_user = ""
-	string st_tlast_backtest_user = ""
-	string st_tfirst_graph_user = ""
-	string st_tlast_graph_user = ""
-	string st_SubSamples = ""
-	string st_tfirst_scenarios = ""
-	string st_tlast_scenarios = ""
-	string st_tfirst_sgraph = ""
+	if @upper(st_load_gui_settings)<>"T" then
+		string st_tfirst_backtest_user = ""
+		string st_tlast_backtest_user = ""
+		string st_tfirst_graph_user = ""
+		string st_tlast_graph_user = ""
+		string st_SubSamples = ""
+		string st_tfirst_scenarios = ""
+		string st_tlast_scenarios = ""
+		string st_tfirst_sgraph = ""
+	endif
 
 	if !date_settings = 1 then
 
@@ -110,35 +133,38 @@ if !dogui=1 then
 
 	' Defaults
 
-	if st_horizons_metrics<>"1 2 4 8 12" then
-		string st_horizons_graph = st_horizons_metrics
-		string st_bias_horizons = st_horizons_metrics
-	else
-		string st_horizons_graph = "4 12" 
-		string st_bias_horizons = "4"
-	endif
+	if @upper(st_load_gui_settings)<>"T" then
 
-	!include_rmse = 1 
-	!include_mae = 0
-	!include_bias = 0 		
-	!percentage_error = 1
-	!transformation = 1
-	string st_graph_benchmark = ""
-	string st_index_period = ""
-	!include_growth_rate = 0		
-	!forecast_dep_var = 1
-	string st_graph_add_backtest = ""
-	string st_graph_add_scenarios = ""
-	!include_original = 1 
-	!include_baseline = 1 
-	!auto_selection = 0
-	!custom_reestimation = 0
-	string st_add_scenarios = ""
-	string st_eq_list_add = ""
-	string st_model_name_add = ""
-	string st_forecasted_ivariables = ""
-	!scenario_dataload = 1
-	string st_base_var = ""
+		if st_horizons_metrics<>"1 2 4 8 12" then
+			string st_horizons_graph = st_horizons_metrics
+			string st_bias_horizons = st_horizons_metrics
+		else
+			string st_horizons_graph = "4 12" 
+			string st_bias_horizons = "4"
+		endif
+	
+		!include_rmse = 1 
+		!include_mae = 0
+		!include_bias = 0 		
+		!percentage_error = 1
+		!transformation = 1
+		string st_graph_benchmark = ""
+		string st_index_period = ""
+		!include_growth_rate = 0		
+		!forecast_dep_var = 1
+		string st_graph_add_backtest = ""
+		string st_graph_add_scenarios = ""
+		!include_original = 1 
+		!include_baseline = 1 
+		!auto_selection = 0
+		!custom_reestimation = 0
+		string st_add_scenarios = ""
+		string st_eq_list_add = ""
+		string st_model_name_add = ""
+		string st_forecasted_ivariables = ""
+		!scenario_dataload = 1
+		string st_base_var = ""
+	endif
 
 	if !advanced_options = 1 then
 
@@ -216,15 +242,18 @@ if !dogui=1 then
 	' 2.4 Store settings
 
 	' Defaults
-	string  st_spec_alias_list  = ""
-	!use_names = 0
-	!include_descriptions = 0
-	!keep_objects = 0
-	!keep_forecasts = 0
-	!keep_equations = 0
-	!keep_information = 0
-	!keep_settings = 0
-	!save_output = 4
+	if @upper(st_load_gui_settings)<>"T" then
+		string  st_spec_alias_list  = ""
+		!use_names = 0
+		!include_descriptions = 0
+		!keep_objects = 0
+		!keep_forecasts = 0
+		!keep_equations = 0
+		!keep_information = 0
+		!keep_settings = 0
+		!store_gui = 1
+		!save_output = 4
+	endif
 
 	if !store_settings = 1 then
 		
@@ -237,7 +266,8 @@ if !dogui=1 then
 		"check",!keep_equations,"Do you want to keep reestiamted  equations?", _
 		"check",!keep_information,"Do you want to keep information objects?", _
 		"check",!keep_settings,"Do you want to keep setting objects?", _
-		"radio",!save_output,"Save output","Yes""Yes - with descriptions"" ""User dialog"" No")
+		"check",!store_gui,"Do you want to store GUI settings for next execution", _
+		"radio",!save_output,"Save output","Yes ""Yes - with descriptions"" ""User dialog"" No")
 
 		if !result = -1 then 'will stop the program unless OK is selected in GUI
 			stop
@@ -259,6 +289,29 @@ if !dogui=1 then
 		string st_include_descriptions = "t"
 	else
 		string st_include_descriptions = "f"
+	endif
+
+	' Storing GUI settings for next execution
+	if !store_gui = 1 then
+		
+		table tb_speceval_gui 
+		
+		tb_speceval_gui(1,1)  = "Settings parameter"
+		tb_speceval_gui(1,2)  = "Value"
+		
+		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_horizons_graph st_bias_horizons  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  	st_base_var  st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
+		
+		for !sp = 1 to @wcount(%settings_parameters)
+			%sp = @word(%settings_parameters,!sp)
+		
+			tb_speceval_gui(1+!sp,1) = %sp
+			tb_speceval_gui(1+!sp,2) = {%sp}		
+		next
+		
+		string st_load_gui_settings = "T"
+
+	else
+		delete(noerr) tb_speceval_gui 
 	endif
 endif
 
