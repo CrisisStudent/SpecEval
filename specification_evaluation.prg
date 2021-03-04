@@ -154,6 +154,7 @@ if !dogui=1 then
 		!forecast_dep_var = 1
 		string st_graph_add_backtest = ""
 		string st_graph_add_scenarios = ""
+		string st_add_scenarios = "" 
 		!include_original = 1 
 		!include_baseline = 1 
 		!auto_selection = 0
@@ -188,6 +189,7 @@ if !dogui=1 then
 		"edit",st_graph_add_scenarios,"Enter the list of series to include in scenario graphs",100, _
 		"check",!include_original,"Include original forecast in scenario graphs", _
 		"check",!include_baseline,"Include baseline forecast in scenario graphs", _
+		"edit",st_add_scenarios,"Enter the list of additional scenarios to be included in scenario graphs",100, _
 		"text","=========================", _
 		"text","", _
 		"text","FORECAST OPTIONS", _
@@ -325,7 +327,7 @@ if !dogui=0 then
 
 	string st_base_var = @equaloption("")	
 	string st_specification_list = @equaloption("SPEC_LIST")
-	string st_spec_alias_list = @equaloption("ALIAS")	
+	string st_spec_alias_list = @equaloption("ALIAS_LIST")	
 	
 
 	string st_eq_list_add = @equaloption("EQ_LIST_ADD")	

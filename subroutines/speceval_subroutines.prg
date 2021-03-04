@@ -634,6 +634,10 @@ if @upper(st_keep_information)="F" then
 			delete(noerr) tb_sb_{%eq} 		
 		next
 	endif
+
+	for %s {st_scenarios}
+		delete(noerrt) st_missing_variables_{%s}
+	next
 	
 '	if  !spec_id=sc_spec_count then
 '		delete(noerr) st_percentage_error
@@ -3306,8 +3310,6 @@ for %s {st_scenarios}
 			endif
 		next
 	endif
-	
-	%intermediate_objects = %intermediate_objects + " " + "st_missing_variables_" + %s
 next
 
 endsub
@@ -4894,7 +4896,7 @@ if @isempty(st_scenarios)=0 then
 
 endif
 
-%object_list = %object_list + " " + "tb_reg_output gp_coef_stability gp_lag_orders gp_lag_orders gp_var_lags"
+%object_list = %object_list + " " + "tb_reg_output gp_coef_stability gp_lag_orders gp_lag_orders "
 
 if @upper(st_keep_objects)="T" then
 	%object_list = %object_list + " " + %intermediate_objects
@@ -4914,7 +4916,11 @@ if (@upper(st_keep_forecasts)="T" or @instr(@upper(st_exec_list),"SCENARIOS_MULT
 endif
 
 if @upper(st_keep_information)="T" then
-	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength"	
+	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength"
+
+	for %s {st_scenarios}
+		%object_list = %object_list  + " " +"st_missing_variables_"+ %s + " " 
+	next 
 endif
 
 'string st_object_list = %object_list
