@@ -87,7 +87,7 @@
 '		c) subroutine performance_tables_multi(string %sub_metric, scalar !sub_source_row, string %sub_table_name)
 '		d) subroutine colorcode(string %sub_tbname, string %sub_rows, string %sub_cols,string %sub_colors, scalar !sub_scales_n, string %sub_by_type,string %sub_absolute_value) 
 '		e) subroutine colorcode_execution(string %sub_tbname, string %sub_rlist,string %sub_clist, string %sub_absolute_value)
-'		f) subroutine scen_graph_multispec(st_use_names)
+'		f) subroutine csf_multispec(st_use_names)
 
 '	12) subroutine speceval_store
 
@@ -4889,6 +4889,7 @@ if @isempty(st_scenarios)=0 then
 	next
 
 	%object_list = %object_list + " " + "gp_csf_level_all gp_csf_trans_all "
+
 endif
 
 %object_list = %object_list + " " + "tb_reg_output gp_coef_stability gp_lag_orders gp_lag_orders gp_var_lags"
@@ -5375,7 +5376,7 @@ endif
 ' 2.6 Multiple specification scenario graphs
 
 if  @instr(@upper(st_exec_list),"SCENARIOS_MULTISPEC") then
-	call scen_graph_multispec(st_include_baseline,st_include_original,st_transformation,st_use_names)
+	call csf_multispec(st_include_baseline,st_include_original,st_transformation,st_use_names)
 
 	sp_spec_evaluation.insert(name=conditional_scenarios_ms)  sp_csfmsgraphs
 	delete(noerr) sp_csfmsgraphs
@@ -5745,7 +5746,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine scen_graph_multispec(string %sub_include_baseline, string %sub_include_original, string %sub_transformation, string %sub_use_names)
+subroutine csf_multispec(string %sub_include_baseline, string %sub_include_original, string %sub_transformation, string %sub_use_names)
 
 delete(noerr) sp_csfmsgraphs
 spool sp_csfmsgraphs
@@ -5768,6 +5769,9 @@ if sc_spec_count<50 then
 else
 	!maxmembers = 10
 endif
+
+' Creating graphs 
+%graph_object_list = "" 
 
 if @wcount(st_scenarios)>0 then
 	for %s {st_scenarios}
@@ -5795,13 +5799,19 @@ if @wcount(st_scenarios)>0 then
 			
 			gp_csf_mslevel_{%s}.addtext(t) Conditional {%s}  forecast - Specification {%first_specification} to {%last_specification} (Level)
 			sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}) gp_csf_mslevel_{%s}
-			delete gp_csf_mslevel_{%s}
+
+			copy gp_csf_mslevel_{%s} gp_csf_mslevel_{%s}_{%first_specification}to{%last_specification}
+			delete(noerr) gp_csf_mslevel_{%s}
+			%graph_object_list = %graph_object_list  + " " + "gp_csf_mslevel_"	+ %s + "_" + %first_specification + "to" + %last_specification
 
 			if @isobject("gp_csf_mstrans_" + %s) then
 
 				gp_csf_mstrans_{%s}.addtext(t) Conditional {%s}  forecast  - Specification {%first_specification} to {%last_specification} ({%trans_description})
 				sp_csfmsgraphs_{%s}.insert(name=specs_{%first_specification}to{%last_specification}_trans) gp_csf_mstrans_{%s}
-				delete gp_csf_mstrans_{%s}
+
+				copy gp_csf_mstrans_{%s} gp_csf_mstrans_{%s}_{%first_specification}to{%last_specification}
+				delete(noerr) gp_csf_mstrans_{%s}	
+				%graph_object_list = %graph_object_list  + " " +  "gp_csf_mstrans_" + %s  + "_" + %first_specification + "to" + %last_specification
 			endif
 			
 			' 5. Proceedinf to next batch of specifications
@@ -5814,6 +5824,9 @@ if @wcount(st_scenarios)>0 then
 	next
 endif
 
+if @upper(st_keep_objects)="F" then
+	delete(noerr) {%graph_object_list}
+endif
 	
 endsub
 
