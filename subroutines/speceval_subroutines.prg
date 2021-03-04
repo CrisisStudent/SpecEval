@@ -251,20 +251,20 @@ if @isempty(st_horizons_graph) then
 	endif	
 endif
 
-if @isempty(st_bias_horizons) then
-	string st_bias_horizons = "8 24"
+if @isempty(st_horizons_bias) then
+	string st_horizons_bias = "8 24"
 endif
 
 st_horizons_metrics = @replace(st_horizons_metrics,", "," ")
 st_horizons_metrics = @replace(st_horizons_metrics,",","")
 st_horizons_graph = @replace(st_horizons_graph,", "," ")
 st_horizons_graph = @replace(st_horizons_graph,",","")
-st_bias_horizons = @replace(st_bias_horizons,", "," ")
-st_bias_horizons = @replace(st_bias_horizons,",","")
+st_horizons_bias = @replace(st_horizons_bias,", "," ")
+st_horizons_bias = @replace(st_horizons_bias,",","")
 
 scalar sc_horizons_metrics_n = @wcount(st_horizons_metrics)
 scalar sc_horizons_graph_n = @wcount(st_horizons_graph)
-scalar sc_bias_horizons_n = @wcount(st_bias_horizons)
+scalar sc_horizons_bias_n = @wcount(st_horizons_bias)
 
 ' 4. Perceentage error default
 if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
@@ -646,7 +646,7 @@ if @upper(st_keep_objects)="F" and sc_spec_count=1 then
 		delete(noerr) gp_forecasts_all_h{%h}
 	next
 
-	for %h {st_bias_horizons}
+	for %h {st_horizons_bias}
 		delete(noerr) gp_forecast_bias_h{%h}
 	next
 
@@ -3095,10 +3095,10 @@ endsub
 
 subroutine forecast_bias_graphs(string %sub_history_series,string %sub_master_mnemonic)
 	
-for !flength_id = 1 to sc_bias_horizons_n
+for !flength_id = 1 to sc_horizons_bias_n
 	
 	' 1. Forecast horizon
-	!flength = @val(@word(st_bias_horizons,!flength_id))
+	!flength = @val(@word(st_horizons_bias,!flength_id))
 
 	' 2. Creating forecast bias matrix
 	matrix(sc_forecastp_n-!flength +1,2) m_forecast_bias
@@ -4032,9 +4032,9 @@ endif
 if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 	%h_include_list = ""
 
-	for !h = 1 to sc_bias_horizons_n
+	for !h = 1 to sc_horizons_bias_n
 		
-		%h = @word(st_bias_horizons,!h)
+		%h = @word(st_horizons_bias,!h)
 	
 		if @isobject("gp_forecasts_all_h" + %h) then
 			sp_spec_evaluation.insert(name=bias_h{%h}) gp_forecast_bias_h{%h}
@@ -4880,8 +4880,8 @@ for !ss = 1 to sc_subsample_count
 	%object_list = %object_list  + " " +  "gp_forecast_subsample" + @str(!ss) + " " + "gp_forecast_subsample"+ @str(!ss)  + "_fd"
 next
 
-for !fh = 1 to sc_bias_horizons_n
-	%fh = @word(st_bias_horizons,!fh)
+for !fh = 1 to sc_horizons_bias_n
+	%fh = @word(st_horizons_bias,!fh)
 	%object_list = %object_list + " " + "gp_forecast_bias_h" + %fh
 next
 
@@ -5184,8 +5184,8 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 	delete(noerr) sp_bias_graphs
 	spool sp_bias_graphs
 	
-	for !flength_id = 1 to sc_bias_horizons_n
-		%fh = @word(st_bias_horizons,!flength_id)
+	for !flength_id = 1 to sc_horizons_bias_n
+		%fh = @word(st_horizons_bias,!flength_id)
 		
 		delete(noerr) sp_bias_graphs_{%fh}
 		spool sp_bias_graphs_{%fh}

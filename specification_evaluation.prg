@@ -137,10 +137,10 @@ if !dogui=1 then
 
 		if st_horizons_metrics<>"1 2 4 8 12" then
 			string st_horizons_graph = st_horizons_metrics
-			string st_bias_horizons = st_horizons_metrics
+			string st_horizons_bias = st_horizons_metrics
 		else
 			string st_horizons_graph = "4 12" 
-			string st_bias_horizons = "4"
+			string st_horizons_bias = "4"
 		endif
 	
 		!include_rmse = 1 
@@ -158,7 +158,6 @@ if !dogui=1 then
 		!include_baseline = 1 
 		!auto_selection = 0
 		!custom_reestimation = 0
-		string st_add_scenarios = ""
 		string st_eq_list_add = ""
 		string st_model_name_add = ""
 		string st_forecasted_ivariables = ""
@@ -172,7 +171,7 @@ if !dogui=1 then
 		!result = @uidialog("caption","Advanced options", _
 		"text","PERFORMANCE METRIC OPTIONS", _ 
 		"edit",st_horizons_graph,"Enter the list of graph horizons", _
-		"edit",st_bias_horizons,"Enter the list of bias graph horizons", _
+		"edit",st_horizons_bias,"Enter the list of bias graph horizons", _
 		"text","Which performance metric you want to include?", _
 		"check",!include_rmse,"RMSE", _
 		"check",!include_mae,"MAE", _
@@ -299,7 +298,7 @@ if !dogui=1 then
 		tb_speceval_gui(1,1)  = "Settings parameter"
 		tb_speceval_gui(1,2)  = "Value"
 		
-		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_horizons_graph st_bias_horizons  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  	st_base_var  st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
+		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_horizons_graph st_horizons_bias  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  	st_base_var  st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
 		
 		for !sp = 1 to @wcount(%settings_parameters)
 			%sp = @word(%settings_parameters,!sp)
@@ -321,7 +320,7 @@ if !dogui=0 then
 	' Main options
 	string st_horizons_metrics = @equaloption("HORIZONS_METRICS")
 	string st_horizons_graph = @equaloption("HORIZONS_GRAPH")
-	string st_bias_horizons = @equaloption("HORIZONS_BIAS")
+	string st_horizons_bias = @equaloption("HORIZONS_BIAS")
 	string st_outofsample = @equaloption("OOS")
 
 	string st_base_var = @equaloption("")	
