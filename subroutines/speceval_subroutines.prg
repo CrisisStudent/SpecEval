@@ -4880,7 +4880,6 @@ next
 for !fh = 1 to sc_bias_horizons_n
 	%fh = @word(st_bias_horizons,!fh)
 	%object_list = %object_list + " " + "gp_forecast_bias_h" + %fh
-	%object_list = %object_list + " " + "m_fb_h" + %fh
 next
 
 if @isempty(st_scenarios)=0 then
@@ -5011,11 +5010,13 @@ if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
 	if sp_lag_orders.@count>0 then
 		sp_spec_evaluation.insert(name=lag_orders) sp_lag_orders
 		delete(noerr) sp_lag_orders
-	
+
 		%obj_name =  "Automatically selected lag orders" 
 		%obj_desc = "- Automatically selected number of lags (of autoregressive and moving average components for ARMA models; of dependent and independet variables for ARDL models)" 
 		call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
  		sp_spec_evaluation.comment lag_orders %comment
+	else
+		delete(noerr) sp_lag_orders
 	endif
 endif
 
@@ -5826,6 +5827,19 @@ endif
 
 if @upper(st_keep_objects)="F" then
 	delete(noerr) {%graph_object_list}
+
+	for %s {st_scenarios}
+		delete(noerr) gr_csf{%s} 
+	next
+endif
+
+if @upper(st_keep_forecasts)="F" then
+	for !spec_id = 1 to sc_spec_count
+		call spec_alias
+		for %s {st_scenarios}
+			delete(noeer) {st_base_var}_csf{%s}_{st_alias}
+		next
+	next
 endif
 	
 endsub
