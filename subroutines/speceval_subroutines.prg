@@ -620,7 +620,8 @@ endif
 ' 3. Cleaning up equations
 if @upper(st_keep_equations)="F" then				
 	for !fp = 1 to @obsrange
-		delete(noerr) {%sub_spec_name}_reest{!fp}
+	%fstart = @otod(!fp)
+		delete(noerr) {%sub_spec_name}_reest{!fp} {%sub_spec_name}_reest{%fstart}
 	next
 endif	
 
@@ -1721,8 +1722,8 @@ endif
 
 delete(noerr) tx_temp
 
-' 5. Storing 
-copy {%sub_eq_name}_reest {%sub_eq_name}_reest{!fp}
+' 5. Storing
+copy {%sub_eq_name}_reest {%sub_eq_name}_reest{%fstart}
 
 endsub
 
@@ -1940,7 +1941,7 @@ endif
 copy eq_ardl{!final_model} {%sub_eq_name}_reest
 
 ' 6. Storing and cleaning up
-copy {%sub_eq_name}_reest {%sub_eq_name}_reest{!fp}
+copy {%sub_eq_name}_reest {%sub_eq_name}_reest{%fstart}
 
 for  !m = 1 to tb_ardl_models.@rows-1
 	delete(noerr) eq_ardl{!m}
@@ -2050,7 +2051,7 @@ smpl {%tfirst_reestimation} {%tlast_reestimation}
 equation {%sub_eq_name}_reest.{%est_command_reest}
 
 ' Storing 
-copy {%sub_eq_name}_reest {%sub_eq_name}_reest{!fp}
+copy {%sub_eq_name}_reest {%sub_eq_name}_reest{%fstart}
 
 
 %intermediate_objects = %intermediate_objects +  "s_depvar s_depvar_f"  + " "
@@ -2177,7 +2178,7 @@ if  @instr(@upper({%sub_var_name}.@attr("selection_info")),"STABILITY") then
 endif
 
 ' Storing 
-copy {%sub_var_name}_reest {%sub_var_name}_reest{!fp}
+copy {%sub_var_name}_reest {%sub_var_name}_reest{%fstart}
 
 if @isobject("sp_var_model_selection")=0 then 
 	series s_laglength = na
@@ -2786,7 +2787,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 				%ss_sample = st_subsample{!SubSample}
 	
 				if @upper(st_outofsample)="T" then
-					%ss_eq = st_spec_name + "_reest"+ @str(sc_subsample{!subsample}_start)
+					%ss_eq = st_spec_name + "_reest"+ st_subsample{!SubSample}_start
 				else
 					%ss_eq = st_spec_name
 				endif
@@ -4523,9 +4524,11 @@ for !coef = 1 to 	!coef_n
 next
 	
 for !fp = 1  to sc_forecastp_n		
+
+	%fstart = @otod(@dtoo(st_tfirst_backtest)+!fp-1)
 	
 	delete(noerr) tb_temp
-	freeze(tb_temp) {st_spec_name}_reest{!fp}.results
+	freeze(tb_temp) {st_spec_name}_reest{%fstart}.results
 	
 	for !coef = 1 to !coef_n
 		%reg = @upper(@word(%sub_varlist,!coef+1))
