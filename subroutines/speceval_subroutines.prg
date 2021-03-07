@@ -5,6 +5,7 @@
 '		- subroutine SubSamples_info_objects(string %subsamples)
 
 '	1) subroutine cleaning_up_objects
+
 '	2) subroutine get_spec_info
 
 '	3) subroutine get_spec_add_info
@@ -620,8 +621,16 @@ endif
 ' 3. Cleaning up equations
 if @upper(st_keep_equations)="F" then				
 	for !fp = 1 to @obsrange
-	%fstart = @otod(!fp)
+		%fstart = @otod(!fp)
 		delete(noerr) {%sub_spec_name}_reest{!fp} {%sub_spec_name}_reest{%fstart}
+
+		if @isobject("sc_add_eq_count")  then
+			for !eq = 1 to  sc_add_eq_count 
+				if  @isobject("st_add_eq_name" + @str(!eq)) then
+					delete(noerr) {st_add_eq_name{!eq}}_reest{%fstart}  {st_add_eq_name{!eq}}_reest
+				endif
+			next
+		endif
 	next
 endif	
 
@@ -630,14 +639,20 @@ if @upper(st_keep_information)="F" then
 	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{%sub_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength
 	
 	if @isobject("st_eq_list_add_final") then
-		for %eq {st_eq_list_add_final}
-			delete(noerr) tb_sb_{%eq} 		
-		next
+		if @wcount(st_eq_list_add_final)>0 then
+			for %eq {st_eq_list_add_final}
+				delete(noerr) tb_sb_{%eq} 		
+			next
+		endif
 	endif
 
-	for %s {st_scenarios}
-		delete(noerrt) st_missing_variables_{%s}
-	next
+	if @isobject("st_scenarios") then
+		if @isempty(st_scenarios)=0 then
+			for %s {st_scenarios}
+				delete(noerr) st_missing_variables_{%s}
+			next
+		endif
+	endif
 	
 '	if  !spec_id=sc_spec_count then
 '		delete(noerr) st_percentage_error
@@ -646,6 +661,9 @@ endif
 
 ' 4. Cleaning up other objects
 if @upper(st_keep_objects)="F" and sc_spec_count=1 then
+
+	delete(noerr)   tb_performance_metrics
+
 	for %h {st_horizons_graph}
 		delete(noerr) gp_forecasts_all_h{%h}
 	next
@@ -664,8 +682,6 @@ if @upper(st_keep_objects)="F" and sc_spec_count=1 then
 			delete(noerr) gp_csf_*_{%s}
 		next
 	endif
-	 	
-	delete(noerr)   tb_performance_metrics
 endif
 
 delete(noerr) gr_regs s_history_series
@@ -771,6 +787,8 @@ subroutine get_spec_add_info
 if @isempty(st_eq_list_add) then
 	scalar sc_add_eq_count = 0
 else
+
+	delete(noerr) st_add_eq_name* st_add_eq_type* st_add_eq_oos* st_add_eq_auto*
 	
 	string st_eq_list_add_final = ""
 	
@@ -812,6 +830,14 @@ else
 			
 		if @instr(@upper(st_add_eq_name),"[ALIAS]")>0 then	
 			st_add_eq_name = @replace(@upper(st_add_eq_name),"[ALIAS]",st_alias) 
+
+			if @isobject(st_add_eq_name)=0 then
+				%alterantive_add_eq_name = @replace(@upper(st_add_eq_name),@upper(st_alias),"_" + st_alias) 
+
+				if @isobject(%alterantive_add_eq_name) then
+					st_add_eq_name = %alterantive_add_eq_name
+				endif
+			endif
 		endif
 		
 		' Checking existence of object 
@@ -821,11 +847,11 @@ else
 				%object_exists = "t"
 			endif
 		endif
-				
+
 		' In case object does not exist checking if no-alias object exists
 		%no_alias_name =st_add_eq_name
 		if @upper(%object_exists)="F" and @instr(@upper(%add_eq),"[ALIAS]")>0 then
-			
+	
 			%no_alias_name = @replace(@upper(st_add_eq_name),@upper(st_alias),"")
 			if  @isobject(%no_alias_name) then
 				if  {%no_alias_name}.@type="EQUATION" or {%no_alias_name}.@type="STRING" then
@@ -834,7 +860,7 @@ else
 				endif
 			endif			
 		endif		
-		
+
 		if @upper(%object_exists)="T" then
 			if {st_add_eq_name}.@type="EQUATION" then
 				string st_add_eq_type = "equation"
@@ -2800,7 +2826,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 				%ss_graph_name = "gp_forecast_subsample"+ @str(!subsample) + "_fd"
 				delete(noerr) {%ss_graph_name}		
 	
-				{%ss_eq}.fcastdecomp(scenarios=%ss_alias, include_addf="f",sample=%ss_sample,keep_table="t",graph_name=%ss_graph_name)
+				{%ss_eq}.fcastdecomp(scenarios=%ss_alias,include_addf="f",include_sum="t",sample=%ss_sample,keep_table="t",graph_name=%ss_graph_name)
 	
 				if @isobject(%ss_graph_name) then
 					{%ss_graph_name}.addtext(t) Decomposition of conditional forecast for {%ss_sample}
@@ -3256,7 +3282,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") then
 		%alias = "_csf" + %s + "[" +"_"+  %s + "]"
 		%graph_name = "gp_csf_fd_" + %s
 
-		{st_spec_name}.fcastdecomp(scenarios=%alias,include_addf="f",sample=%csf_sample,keep_table="t",use_table="t",graph_name=%graph_name)
+		{st_spec_name}.fcastdecomp(scenarios=%alias,include_addf="f",include_sum="f",sample=%csf_sample,keep_table="t",use_table="t",graph_name=%graph_name)
 
 		if @isobject(%graph_name) then
 			%desc = "Decomposition of conditional "+ %scenario + " forecast"
@@ -3269,7 +3295,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") then
 		%alias_list = "_csf" + "_"+ @word(st_scenarios,!s)  +"[" + "_"+ @word(st_scenarios,!s)   + "]" +  " " +"_csf"+  @word(st_scenarios,1)  +"[" + "_"+ @word(st_scenarios,1)   + "]" 
 		%graph_name = "gp_csf_fdd_" + %s
 
-		{st_spec_name}.fcastdecomp(scenarios=%alias_list,include_addf="f",sample=%csf_sample,keep_table="t",graph_name=%graph_name)
+		{st_spec_name}.fcastdecomp(scenarios=%alias_list,include_addf="f",include_sum="f",sample=%csf_sample,keep_table="t",graph_name=%graph_name)
 
 		if @isobject(%graph_name) then
 			%desc = "Decomposition of conditional "+ %scenario + "-" + @word(st_scenarios,1)  + " forecast"
