@@ -4415,22 +4415,7 @@ for !evar = 1 to @wcount(%eq_variables)
 
 next	
 
-'Additional formatting
-
-if !max_length_evar+5>20 then
-	!col_length = !max_length_evar+5
-	tb_reg_output.setwidth(A) !col_length
-endif
-
-if !max_length_desc+5>!length_cols2to7 then
-	!col_length = !max_length_desc+5-5*10
-	tb_reg_output.setwidth(B) !col_length
-endif
-
-!last_row = tb_reg_output.@rows+1
-tb_reg_output.setlines(!last_row,1,!last_row,7) +d
-
-' Deleting if no description was inserted
+'Checking if description was inserted
 !description_inserted = 0
 for !evar = 1 to @wcount(%eq_variables)
 	if @isempty(tb_reg_output(!heading_row+1+!evar,2))=0 then
@@ -4438,6 +4423,28 @@ for !evar = 1 to @wcount(%eq_variables)
 	endif
 next 
 
+'Additional formatting
+if !description_inserted = 1 then
+	if !max_length_evar+5>20 then
+		!col_length = !max_length_evar+5
+		tb_reg_output.setwidth(A) !col_length
+	endif
+
+	if !max_length_desc*4/5+5>!length_cols2to7 then
+		!col_length = !max_length_desc*4/5+5-5*10
+		tb_reg_output.setwidth(B) !col_length
+	endif
+	
+	!last_row = tb_reg_output.@rows+1
+	tb_reg_output.setlines(!last_row,1,!last_row,7) +d
+
+	for !evar = 1 to @wcount(%eq_variables)
+		tb_reg_output.setjust(!heading_row+1+!evar,2) left
+		tb_reg_output.setmerge(!heading_row+1+!evar,2,!heading_row+1+!evar,7) = %var_desc	
+	next
+endif
+
+' Deleting if no description was inserted
 if !description_inserted = 0 then
 	!row_delete_n =  @wcount(%eq_variables)+1
 	tb_reg_output.deleterow(!heading_row) !row_delete_n
