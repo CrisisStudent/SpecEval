@@ -1533,26 +1533,30 @@ call reestimation_parameters(%sub_eq_name)
 if @upper(st_custom_reestimation)="F" then	
 
 	' Identifying zero variance regressors
-	if @instr(@upper(%est_command)," C ") then
-						
+	if @upper(st_eliminate_multicol)="T" then
+		if @instr(@upper(%est_command)," C ") then
+							
+			if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
+				{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
+			endif
+			
+			!reg_n = gr_{%sub_eq_name}_regs.@count
+	
+			%regs = gr_{%sub_eq_name}_regs.@members		
+	
+			call zerovariance_identification(%regs, %tfirst_reestimation,  %tlast_reestimation, "zerovariance")
+		endif
+	endif
+	
+	' Identifying perfect correlation regressors
+	if @upper(st_eliminate_multicol)="T" then
 		if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
 			{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
 		endif
 		
 		!reg_n = gr_{%sub_eq_name}_regs.@count
-
-		%regs = gr_{%sub_eq_name}_regs.@members		
-
-		call zerovariance_identification(%regs, %tfirst_reestimation,  %tlast_reestimation, "zerovariance")
+		call perfect_corr_identification(gr_{%sub_eq_name}_regs.@members, %tfirst_reestimation,  %tlast_reestimation, "perfectcor")
 	endif
-	
-	' Identifying perfect correlation regressors
-	if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
-		{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
-	endif
-	
-	!reg_n = gr_{%sub_eq_name}_regs.@count
-	call perfect_corr_identification(gr_{%sub_eq_name}_regs.@members, %tfirst_reestimation,  %tlast_reestimation, "perfectcor")
 
 	' Reestimating 
 	if @upper(%sub_auto_selection)="F" then
@@ -1680,47 +1684,56 @@ subroutine reestimating(string %sub_eq_name)
 %est_command_reest = %est_command
 
 ' 2. Removing zero-variance regressors 
-if  @instr(@upper(%est_command)," C ") then
-	if %zerovariance = "t" then
-		for !r = 2 to !reg_n
-			if !zerovariance{!r} = 1 then				
-		
-				'%reg_string = gr_{%sub_eq_name}_regs.@seriesname(!r)
-				
-				%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," C "," ")
-				
-			endif			
-		next
-		
-		if !zerovariance1 = 1 then		
-			@uiprompt("Dependent variable does not have any variation on sample " + %tfirst_reestimation + " "  + %tlast_reestimation)
+if @upper(st_eliminate_multicol)="T" then
+	if  @instr(@upper(%est_command)," C ") then
+		if %zerovariance = "t" then
+			for !r = 2 to !reg_n
+				if !zerovariance{!r} = 1 then				
+			
+					%reg_string = gr_{%sub_eq_name}_regs.@seriesname(!r)
+	
+					if @mean({%reg_string})=0 then
+						%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," " + @upper(%reg_string) + " "," ")
+					else				
+						%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," C "," ")
+					endif				
+				endif			
+			next
+			
+			if !zerovariance1 = 1 then		
+				@uiprompt("Dependent variable does not have any variation on sample " + %tfirst_reestimation + " "  + %tlast_reestimation)
+			endif
 		endif
 	endif
-endif
 
-%est_command_reest = @trim(%est_command_reest)
+	%est_command_reest = @trim(%est_command_reest)
+endif
 
 ' 3. Removing perfect correlation regressors
-if @instr("  "  + @upper(%eq_command_reest) + " "," C ")=0 and !reg_n=2  then
-	%perfectcor = "f"  
+if @upper(st_eliminate_multicol)="T" then
+	if @instr("  "  + @upper(%eq_command_reest) + " "," C ")=0 and !reg_n=2  then
+		%perfectcor = "f"  
+	endif
+	
+	if %perfectcor = "t" then
+		for !reg = 2 to  !reg_n
+			if !perfectcor{!reg} = 1 then
+				%reg_string = gr_{%sub_eq_name}_regs.@seriesname(!reg)
+				%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," "+ @upper(%reg_string) + " "," ")
+			endif			
+		next
+	endif 	
+	
+	%est_command_reest = @trim(%est_command_reest)
 endif
-
-if %perfectcor = "t" then
-	for !reg = 2 to  !reg_n
-		if !perfectcor{!reg} = 1 then
-			%reg_string = gr_{%sub_eq_name}_regs.@seriesname(!reg)
-			%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," "+ @upper(%reg_string) + " "," ")
-		endif			
-	next
-endif 	
-
-%est_command_reest = @trim(%est_command_reest)
 
 ' Dealing with situation when no regressors are left
-if %perfectcor = "t" and %zerovariance = "t" and @wcount(%est_command_reest ) then
-	%est_command_reest  = %est_command_reest  + " C "
+if @upper(st_eliminate_multicol)="T" then
+	if %perfectcor = "t" and %zerovariance = "t" and @wcount(%est_command_reest ) then
+		%est_command_reest  = %est_command_reest  + " C "
+	endif
 endif
-
+	
 ' 4. Reestimating
 if @upper(st_ignore_errors)="T" then
 	!original_max_errors = @maxerrcount

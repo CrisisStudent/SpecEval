@@ -337,7 +337,6 @@ if !dogui=0 then
 	string st_scenarios = @equaloption("SCENARIOS")
 
 	string st_exec_list_user = @equaloption("EXEC_LIST")
-	string st_ignore_errors = @equaloption("IGNORE_ERRORS")
 							
 	' Date options	
 	string st_tfirst_backtest_user = @equaloption("TFIRST_TEST")
@@ -398,6 +397,10 @@ if !dogui=0 then
 	string st_auto_selection = @equaloption("auto_select")	
 	string st_custom_reestimation = @equaloption("CUSTOM_REEST")
 	string st_scenario_dataload = @equaloption("SCENARIO_DATALOAD")
+
+	string st_eliminate_multicol = @equaloption("ELIMINATE_MULTICOL")
+	string st_ignore_errors = @equaloption("IGNORE_ERRORS")
+	
 	
 	' Store options
 	string st_keep_objects = @equaloption("KEEP_OBJECTS")	
@@ -481,7 +484,14 @@ if !dogui=0 then
 	if @isempty(st_scenario_dataload) then
 		st_scenario_dataload = "t"
 	endif		
-	
+
+	if @isempty(st_eliminate_multicol) then
+		st_eliminate_multicol = "t"
+	endif		
+
+	if @isempty(st_ignore_errors) then
+		st_ignore_errors = "f"
+	endif		 
 endif
 
 endsub
