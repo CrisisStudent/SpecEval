@@ -3233,10 +3233,10 @@ endif
 
 if @isempty(st_tfirst_scenarios)=0 then
 	if @dtoo(tb_sb_{st_spec_name}(2,3))<@dtoo(st_tfirst_scenarios) then
-		st_tfirst_scenarios = tb_sb_{st_spec_name}(2,3)
+		st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_spec_name}(2,3))+1)
 	endif
 else
-	st_tfirst_scenarios = tb_sb_{st_spec_name}(2,3)	
+	st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_spec_name}(2,3))+1)
 endif
 
 if @isempty(st_tfirst_sgraph) then
