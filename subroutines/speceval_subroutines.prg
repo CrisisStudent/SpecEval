@@ -11,7 +11,7 @@
 '	3) subroutine get_spec_add_info
 
 '	4) subroutine recursive_forecasts
-'		a) subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
+'		a) subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_short_list)
 '			- subroutine regressor_group(string %sub_eq_name)
 '			- subroutine sb_identification(string %sub_tb_name,string %sub_group_name)
 '			- subroutine sb_identification_identity(string %sub_identity_name)
@@ -22,7 +22,7 @@
 '			- subroutine ardl_auto_select_options(string %sub_eq_name, string %sub_object_alias)
 '			- subroutine arma_auto_select_options(string %sub_eq_name)
 '			- subroutine var_auto_select_options(string %sub_eq_name)
-'		d) subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var)
+'		d) subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var, ,scalar !sub_add_eq_count)
 '		e) subroutine reestimation(string %sub_eq_name, string %sub_auto_selection)
 '			- subroutine reestimation_parameters(string %sub_eq_name)
 '			- subroutine zerovariance_identification(string %sub_series_list, string %sub_tfirst, string %sub_tlast, string %sub_indicator_name)
@@ -269,40 +269,13 @@ scalar sc_horizons_bias_n = @wcount(st_horizons_bias)
 
 ' 4. Perceentage error default
 if @isempty(st_percentage_error) or @upper(st_percentage_error)="AUTO" then
+	call trend_identification(st_base_var,"f")
 
-	!trend_default = 0
-
-	series s_depvar= @d({st_base_var})
-	!variance_depvar = @stdev(s_depvar)
-	
-	if !variance_depvar>0 then
-
-		smpl @all
-		'equation et_{st_base_var}.ls {st_base_var} c @trend
-		'equation et_{st_base_var}.ls {st_base_var}-@elem({st_base_var},%sub_qfirst) {st_base_var}(-1)-@elem({st_base_var},%sub_qfirst) @trend
-		equation et_{st_base_var}.ls @d({st_base_var}) c
-		
-		if !trend_default = 1 then		
-			if et_{st_base_var}.@pval(1)>0.15 then
-	'		if et_{st_base_var}.@pval(2)<0.05 and et_{st_base_var}.@r2>0.5 then
-				st_percentage_error = "f"
-			else
-				st_percentage_error = "t"
-			endif
-		else
-			if et_{st_base_var}.@pval(1)<0.05 and et_{st_base_var}.@coef(1)>0 then
-	'		if et_{st_base_var}.@pval(2)<0.05 and et_{st_base_var}.@r2>0.5 then
-				st_percentage_error = "t"
-			else
-				st_percentage_error = "f"
-			endif
-		endif
-
-		%intermediate_objects = %intermediate_objects + "et_" + st_base_var +  " "
-
+	if @upper(%trend_present)="T" then
+		st_percentage_error = "t"
+	else
+		st_percentage_error = "f"
 	endif
-	
-	delete(noerr) s_depvar
 
 	if @upper(st_keep_information)="F" then
 		delete(noerr) et_{st_base_var}
@@ -565,6 +538,43 @@ if _this.@type = "STRING" then
 endif
 
 %intermediate_objects = %intermediate_objects + "st_depvar" + " "
+
+endsub
+
+' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+subroutine trend_identification(string %sub_var, string %sub_trend_default)
+
+series s_depvar= @d({%sub_var})
+!variance_subvar = @stdev(s_depvar)
+delete(noerr) s_depvar
+
+if !variance_subvar>0 then
+
+	smpl @all
+	'equation et_{%sub_var}.ls {%sub_var} c @trend
+	'equation et_{%sub_var}.ls {%sub_var}-@elem({%sub_var},%sub_qfirst) {%sub_var}(-1)-@elem({%sub_var},%sub_qfirst) @trend
+	equation et_{%sub_var}.ls @d({%sub_var}) c
+	
+	if @upper(%sub_trend_default) = "T" then
+		if et_{%sub_var}.@pval(1)>0.15 then
+'		if et_{%sub_var}.@pval(2)<0.05 and et_{%sub_var}.@r2>0.5 then
+			%trend_present = "f"
+		else
+			%trend_present = "t"
+		endif
+	else
+		if et_{%sub_var}.@pval(1)<0.05 and et_{%sub_var}.@coef(1)>0 then
+'		if et_{%sub_var}.@pval(2)<0.05 and et_{%sub_var}.@r2>0.5 then
+			%trend_present = "t"
+		else
+			%trend_present = "f"
+		endif
+	endif
+
+	%intermediate_objects = %intermediate_objects + "et_" + %sub_var +  " "
+
+endif
 
 endsub
 
@@ -927,7 +937,11 @@ subroutine recursive_forecasts
 ' 1. Sample boundaries
 
 ' Main equation
-call sample_boundaries(st_spec_name,"f")
+if @upper(st_auto_selection)="T" then
+	call sample_boundaries(st_spec_name,"f","t")
+else
+	call sample_boundaries(st_spec_name,"f","f")
+endif
 
 if @upper(st_auto_selection)="F" and {st_spec_name}.@type<>"STRING" then
 	call estimation_boundaries(st_spec_name,"")	
@@ -940,7 +954,11 @@ for !add_eq = 1 to sc_add_eq_count
 	
 	if @upper(st_add_eq_type{!add_eq})="EQUATION" then
 		
-		call sample_boundaries(st_add_eq_name{!add_eq},"t")
+		if @upper(st_add_eq_auto{!add_eq})="T" then
+			call sample_boundaries(st_add_eq_name{!add_eq},"t","t")
+		else
+			call sample_boundaries(st_add_eq_name{!add_eq},"t","f")
+		endif
 	
 		if @upper(st_add_eq_oos{!add_eq})="T" then			
 			
@@ -963,7 +981,7 @@ call create_forecast_number_tb
 
 ' 3. Creating forecasting model
 if @upper(st_custom_reestimation)="F" then
-	call create_forecast_model(st_spec_name,"m_speceval",st_forecast_dep_var)
+	call create_forecast_model(st_spec_name,"m_speceval",st_forecast_dep_var,sc_add_eq_count)
 	%intermediate_objects = %intermediate_objects +  "m_speceval" + " "
 endif
 
@@ -1011,12 +1029,12 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries)
+subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_short_list)
 
 if {%sub_eq_name}.@type<>"STRING" then
 
-	' 1. Creating regressor group 
-	call regressor_group(%sub_eq_name)
+	' 1. Creating regressor group
+	call regressor_group(%sub_eq_name,%sub_short_list)
 
 	' 2. Identifying smaple boundaries
 	call sb_identification("tb_sb_" + %sub_eq_name,"gr_"+ %sub_eq_name+ "_regs" )
@@ -1035,11 +1053,11 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine regressor_group(string %sub_eq_name)
+subroutine regressor_group(string %sub_eq_name, string %sub_short_list)
 
 'Equatiion
 if {%sub_eq_name}.@type="EQUATION" then
-	if @upper(st_auto_selection)="F" then
+	if @upper(%sub_full_list)<>"T" then
 		
 		if @isobject("gr_"+ %sub_eq_name + "_regs")=0 then
 			{%sub_eq_name}.makeregs gr_{%sub_eq_name}_regs
@@ -1493,7 +1511,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var)
+subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var, scalar !sub_add_eq_count)
 
 'Create model
 model {%sub_cf_model_name}
@@ -1512,7 +1530,7 @@ if @upper(%sub_forecast_dep_var)="T" then
 endif
 
 ' Add additioanl equation
-for !add_eq = 1 to sc_add_eq_count
+for !add_eq = 1 to {!sub_add_eq_count}
 	if @upper(st_add_eq_type{!add_eq})="EQUATION" then
 		{%sub_cf_model_name}.merge {st_add_eq_name{!add_eq}}
 	else
@@ -3204,10 +3222,10 @@ subroutine conditional_scenario_forecast
 	
 ' 1. Creating forecast model
 if @isobject("m_speceval")=0 then
-	call create_cforecast_model(st_spec_name,"m_speceval",st_forecast_depvar)
+	call create_forecast_model(st_spec_name,"m_speceval",st_forecast_depvar,sc_add_eq_count)
 endif
 
-' 2. Identifying all model
+' 2. Identifying exogenous variables
 string st_exog_variables = m_speceval.@exoglist
 
 ' 3. Checking existence of scenario series
@@ -3228,7 +3246,7 @@ call missing_scen_variables
 ' 6. Defining forecasting sample
 
 if @isobject("tb_sb_" + st_spec_name)=0 then
-	call sample_boundaries(st_spec_name,"f")	
+	call sample_boundaries(st_spec_name,"f","f")	
 endif
 
 if @isempty(st_tfirst_scenarios)=0 then
