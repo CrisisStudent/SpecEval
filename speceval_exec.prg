@@ -75,16 +75,25 @@ for !spec_id = 1 to sc_spec_count
 		statusline Conditional scenario forecasts	
 		call conditional_scenario_forecast
 	endif
+
+	' ###########################
+	' #### 6.0 Shock responses #####
+	' ###########################
+
+	if @instr(@upper(st_exec_list),"SHOCKS") then
+		statusline Shock response graphs
+		call shock_responses(st_spec_name,st_base_var,st_tfirst_shocks,st_tlast_shocks,st_tfirst_shockgraph,st_base_scenario,st_percetage_error,st_transforamtion,st_forecast_depvar,sc_addd_eq_count)
+	endif
 		
 	' ##########################################
-	' ##### 5.0 Creating perfromance report ###########
+	' ##### 7.0 Creating perfromance report ###########
 	' ##########################################
 	
 	statusline Creating performance reports ({st_spec_name})
 	call evaluation_report
 
 	' ############################################
-	' ##### 6.0 Storing results and cleaning up ###########
+	' ##### 8.0 Storing results and cleaning up ###########
 	' ############################################
 	
 	' Storing results 
@@ -105,7 +114,7 @@ next
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 ' ########################################################
-' ##### 7.0 Creating multiple-equation perfromance report ###########
+' ##### 9.0 Creating multiple-equation perfromance report ###########
 ' ########################################################
 
 if sc_spec_count>1 then
@@ -114,7 +123,7 @@ if sc_spec_count>1 then
 endif
 
 ' ############################################
-' ##### 8.0 Storign and displaying outputs ###########
+' ##### 10.0 Storign and displaying outputs ###########
 ' ############################################
 
 sp_spec_evaluation.display
@@ -124,7 +133,7 @@ if (@upper(st_save_output)="F")=0 then
 endif
 
 ' ############################################
-' ##### 9.0 Cleaning up settings objects ###########
+' ##### 11.0 Cleaning up settings objects ###########
 ' ############################################
 
 if @upper(st_keep_information)="F" then	

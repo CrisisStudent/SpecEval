@@ -3963,6 +3963,241 @@ endsub
 
 ' ##################################################################################################################
 
+subroutine shock_responses(string %sub_eq_name, string %sub_base_Var, string %sub_tfirst_shocks, string %sub_tlast_shocks, string %sub_tfirst_shockgraph, string %sub_sbase_scenario, string %sub_percentage_error, string %sub_trans, string %sub_forecast_depvar,scalar !sub_add_eq_count)
+
+' 1. Creating forecast model
+if @isobject("m_speceval")=0 then
+	call create_forecast_model(%sub_eq_name,"m_speceval",%sub_forecast_depvar,  !sub_add_eq_count)
+endif
+
+' 2. Identifying shock variables
+delete(noerr) gr_regs
+{%sub_eq_name}.makeregs gr_regs	
+string st_shock_variables = gr_regs.@depends
+string st_shock_variables = @replace(" "+ @upper(st_shock_variables) + " "," "+ @upper(%sub_base_var)+ " "," ")
+
+'3. Creating no shock path for shock variables
+
+for %ShockVar {st_shock_variables}
+	if @isempty(%sub_base_scenario)=0  or @isobject(%ShockVar + "_"+ %sub_base_scenario)=0  then
+		smpl @all
+		series {%ShockVar}_srb = {%ShockVar}
+	else
+		smpl @all
+		series {%ShockVar}_srb = {%ShockVar}_{%sub_base_scenario}
+	endif
+next
+
+' 4 Defining shock forecast dates
+
+' Start date
+if @isempty(%sub_tfirst_shocks) then
+	if @isobject("tb_sb_" + %sub_eq_name)=0 then
+		call sample_boundaries(%sub_eq_name,"f")	
+	endif
+	
+	string st_tfirst_shocks = @otod(@dtoo(tb_sb_{%sub_eq_name}(2,3))-12)
+else
+	string st_tfirst_shocks = %sub_tfirst_shocks
+endif
+
+' Initializing end date
+if @isempty(%sub_tlast_shocks) then
+	if @isobject("tb_sb_" + st_spec_name)=0 then
+		call sample_boundaries(%sub_eq_name,"f")	
+	endif
+	
+	string st_tlast_shocks = @otod(@dtoo(tb_sb_{%sub_eq_name}(2,3)))
+else
+	string st_tlast_shocks = %sub_tlast_shocks
+endif
+
+' Adjusting end date
+for %ShockVar {st_shock_variables}
+	if @dtoo({%ShockVar}_srb.@last)<@dtoo(st_tlast_shocks) then
+		st_tlast_shocks = {%ShockVar}_srb.@last
+	endif
+next
+
+' Graph start date
+if @isempty(%sub_tfirst_shockgraph) then
+	string st_tfirst_shocksgraph = @otod(@dtoo(st_tfirst_shocks)-12)
+else
+	st_tfirst_shocksgraph =%sub_tfirst_shocksgraph
+endif
+
+' 5. Creating no shock path for base varaible
+if @instr(@upper(m_speceval.@scenarios),"SHOCK RESPONSE SCENARIO: NO SHOCK PATH")>0 then
+	m_speceval.scenario(d) Shock response scenario: No shock path
+endif
+
+m_speceval.scenario(n,a=_srb) Shock response scenario: No shock path
+m_speceval.exclude {st_shock_variables}
+m_speceval.override {st_shock_variables}
+
+smpl {st_tfirst_shocks} {st_tlast_shocks} 
+m_speceval.solve
+
+' 6. Creating shock paths
+string st_shock_transformations = ""
+
+for %ShockVar {st_shock_variables}
+
+	' Determining shock trasnformation
+	call trend_identification(%ShockVar,"t")
+
+	if @upper(%trend_present)="F" then
+		%shock_transformation = "level"
+	else
+		if @min({%ShockVar})>0 then
+			%shock_transformation = "dlog"
+		else
+			%shock_transformation = "difference"
+		endif
+	endif
+
+	st_shock_transformations= st_shock_transformations + %ShockVar + "=" + %shock_transformation + ", "
+	%{%ShockVar}_trans = %shock_transformation
+
+	'Calculating shocks
+	if @upper(%shock_transformation)="LEVEL" then
+		series s_{%ShockVar}_trans = {%ShockVar}
+	endif 	
+
+	if @upper(%shock_transformation)="DLOG" then
+		series s_{%ShockVar}_trans = @dlog({%ShockVar})
+	endif
+
+	if @upper(%shock_transformation)="DIFFERENCE" then
+		series s_{%ShockVar}_trans = @d({%ShockVar})
+	endif 	
+
+	!shock = @stdev(s_{%ShockVar}_trans)
+	
+	' Creating shock path
+	smpl @all
+	series {%ShockVar}_srs = {%ShockVar}_srb
+
+	if @upper(%shock_transformation)="LEVEL" then
+		smpl {st_tfirst_shocks} {st_tlast_shocks}
+		series {%ShockVar}_srs = {%ShockVar}_srb+!shock
+	endif
+
+	if @upper(%shock_transformation)="DIFFERENCE" then
+		smpl {st_tfirst_shocks} {st_tfirst_shocks}
+		series @d({%ShockVar}_srs) = @d({%ShockVar}_srs)-!shock
+
+		smpl {st_tfirst_shocks}+1 {st_tlast_shocks}
+		series @d({%ShockVar}_srs) = @d({%ShockVar}_srb)
+	endif
+
+	if @upper(%shock_transformation)="DLOG" then
+		smpl {st_tfirst_shocks} {st_tfirst_shocks}
+		series @d({%ShockVar}_srs) = @dlog({%ShockVar}_srs)-!shock
+
+		smpl {st_tfirst_shocks}+1 {st_tlast_shocks}
+		series @dlog({%ShockVar}_srs) = @dlog({%ShockVar}_srb)
+	endif
+next
+
+' 6. Creating shock responses
+for !srs = 1 to @wcount(st_shock_variables)
+
+	%ShockVar = @word(st_shock_variables,!srs)
+
+	if @instr(@upper(m_speceval.@scenarios),"SHOCK RESPONSE SCENARIO: " + @upper(%ShockVar))>0 then
+		m_speceval.scenario(d) Shock response scenario: {%ShockVar}
+	endif
+
+	m_speceval.scenario(n,a=_srs) Shock response scenario: {%ShockVar}
+	m_speceval.exclude {%ShockVar}
+	m_speceval.override {%ShockVar}
+
+	smpl {st_tfirst_shocks} {st_tlast_shocks} 
+	m_speceval.solve
+
+	copy {%sub_base_var}_srs {%sub_base_var}_srs{!srs}
+	{%sub_base_var}_srs{!srs}.displayname Shock reponse: Shock to {%ShockVar}
+	
+next 
+
+' 7. Creating shock response graphs
+for !srs = 1 to @wcount(st_shock_variables)
+
+	%ShockVar = @word(st_shock_variables,!srs)
+
+	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 gp_sr_{%ShockVar}
+
+	' 7.1 Response graphs
+
+	' Primary transformation graphs
+	if @upper(%sub_trans)="LEVEL" or @upper(%sub_trans)="DEVIATION" then
+		smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+		graph gp_response1.line {%sub_base_var}_srs{!srs} {%sub_base_var}_srb
+		gp_response1.setelem(1) legend(No-shock forecast)
+		gp_response1.setelem(2) legend(Shock forecast)
+		gp_response1.addtext(t) Level
+	endif
+
+	' Deviation graphs
+	if @upper(%sub_percentage_error)="T" then
+		smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+		graph gp_response2.line ({%sub_base_var}_srs{!srs}-{%sub_base_var}_srb)/{%sub_base_var}_srb*100
+		gp_response2.setelem(1) legend(Deviation from no-shock forecast (in %))
+		gp_response2.addtext(t) Deviation from no-shock forecast
+	else
+		smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+		graph gp_response2.line ({%sub_base_var}_srs{!srs}-{%sub_base_var}_srb)
+		gp_response2.setelem(1) legend(Difference from no-shock forecast)
+		gp_response2.addtext(t) Difference from no-shock forecast
+	endif
+
+	' 7.2 Shock graphs
+
+	' Level graph
+	smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+	graph gp_shock1.line {%ShockVar}_srb {%ShockVar}_srs
+	gp_shock1.setelem(1) legend(Baseline path)
+	gp_shock1.setelem(2) legend(Shock path)
+	gp_shock1.addtext(t) Level
+
+	' Deviation graph
+	if @upper(%{%ShockVar}_trans)="DLOG" then
+		smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+		graph gp_shock2.line ({%ShockVar}_srs-{%ShockVar}_srb)/{%ShockVar}_srb*100
+		gp_shock2.setelem(1) legend(Deviation from no-shock forecast (in %))
+		gp_shock2.addtext(t) Deviation from no-shock forecast
+	else
+		smpl {st_tfirst_shocksgraph} {st_tlast_shocks} 
+		graph gp_shock2.line ({%ShockVar}_srs-{%ShockVar}_srb)
+		gp_shock2.setelem(1) legend(Difference from no-shock forecast)
+		gp_shock2.addtext(t) Difference from no-shock forecast
+	endif
+
+	' 7.3 Merged graph
+	graph gp_sr_{%ShockVar}.merge gp_response1 gp_response2 gp_shock1 gp_shock2
+	gp_sr_{%ShockVar}.align(2,1,3)
+
+	'Adding response/shock labels
+	gp_sr_{%ShockVar}.addtext(t,sb) Response - {%sub_base_var}
+	gp_sr_{%ShockVar}.addtext(6.18,5,sb) Shock - {%ShockVar}
+
+
+	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 
+
+next
+
+endsub
+
+
+' ##################################################################################################################
+
+
+
+
+
+' ##################################################################################################################
+
 subroutine evaluation_report
 
 '1. Creating spool
