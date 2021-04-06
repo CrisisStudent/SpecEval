@@ -139,7 +139,7 @@ endif
 ' Removing specifications that do not exist or are not supported type
 for %spec {st_specification_list}
 	if @isobject(%spec)=0 then
-		st_specification_list = @replace(@upper(st_specification_list),@upper(%spec),"")
+		st_specification_list = @replace(" " + @upper(st_specification_list) + " "," " + @upper(%spec) + " "," ")
 	else
 
 		if ({%spec}.@type="EQUATION")=0 and ({%spec}.@type="STRING")=0 and ({%spec}.@type="VAR")=0 then
@@ -902,9 +902,10 @@ else
 		endif				
 											
 		' Storing		
-		
-		if @upper(st_add_eq_type)="IDENTITY" then
-			st_add_eq_oos = "f"
+		if @isobject("st_add_eq_type") then
+			if @upper(st_add_eq_type)="IDENTITY" then
+				st_add_eq_oos = "f"
+			endif
 		endif
 		
 		if @upper(%object_exists)="T" then
@@ -1709,12 +1710,16 @@ if @upper(st_eliminate_multicol)="T" then
 				if !zerovariance{!r} = 1 then				
 			
 					%reg_string = gr_{%sub_eq_name}_regs.@seriesname(!r)
+
+					series s_reg = {%reg_string}
 	
-					if @mean({%reg_string})=0 then
+					if @mean(s_reg)=0 then
 						%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," " + @upper(%reg_string) + " "," ")
 					else				
 						%est_command_reest = @replace(" " + @upper(%est_command_reest) + " "," C "," ")
-					endif				
+					endif		
+
+					delete(noerr) s_reg		
 				endif			
 			next
 			
@@ -1747,7 +1752,7 @@ endif
 
 ' Dealing with situation when no regressors are left
 if @upper(st_eliminate_multicol)="T" then
-	if %perfectcor = "t" and %zerovariance = "t" and @wcount(%est_command_reest ) then
+	if %perfectcor = "t" and %zerovariance = "t" and @wcount(%est_command_reest)=2 then
 		%est_command_reest  = %est_command_reest  + " C "
 	endif
 endif
@@ -5217,9 +5222,11 @@ endif
 if @upper(st_keep_information)="T" then
 	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength"
 
-	for %s {st_scenarios}
-		%object_list = %object_list  + " " +"st_missing_variables_"+ %s + " " 
-	next 
+	if @isempty(st_scenarios)=0 then
+		for %s {st_scenarios}
+			%object_list = %object_list  + " " +"st_missing_variables_"+ %s + " " 
+		next 			
+	endif
 endif
 
 'string st_object_list = %object_list
