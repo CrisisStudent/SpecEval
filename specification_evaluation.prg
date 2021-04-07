@@ -21,7 +21,7 @@ call speceval_user_settings
 call include_list
 
 %exec_file_name = "speceval_exec.prg"
-%exec_file_path  = %add_in_path  + %exec_file_name
+%exec_file_path  = %add_in_path + "subroutines\" + %exec_file_name
 exec %exec_file_path
 
 ' ##################################################################################################################
@@ -67,8 +67,7 @@ if !dogui=1 then
 	if @upper(st_load_gui_settings)<>"T" then
 		string st_exec_list_user = "normal"
 		!forecast_type = 1
-		string st_horizons_metrics = "1 2 4 8 12"
-		string st_specification_list = _this.@name + "*"
+		string st_horizons_metrics = "1 2 4 8 12"		string st_specification_list = _this.@name + "*"
 		string st_scenarios = "" 
 		
 		!date_settings = 0
