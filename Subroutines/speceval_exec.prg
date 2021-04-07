@@ -1,5 +1,5 @@
-include .\subroutines\speceval_subroutines.prg
-include .\subroutines\include_list.prg
+include .\speceval_subroutines.prg
+include .\include_list.prg
 
 statusline Setting parameters
 call settings_parameters
