@@ -126,7 +126,7 @@ endif
 ' ##### 10.0 Storign and displaying outputs ###########
 ' ############################################
 
-sp_spec_evaluation.display
+{st_spool_name}.display
 
 if (@upper(st_save_output)="F")=0 then
 	call speceval_store
@@ -154,7 +154,7 @@ if @upper(st_keep_settings)="F" then
 	st_graph_add_backtest st_graph_add_scenarios st_include_baseline st_include_original st_add_scenarios st_index_period st_graph_benchmark _
 	st_eq_list_add sc_add_eq_count st_model_name_add st_forecasted_ivariables _ 
 	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names st_save_output st_include_descriptions _
-	st_exec_list st_exec_list_user st_eliminate_multicol st_ignore_errors	
+	st_exec_list st_exec_list_user st_eliminate_multicol st_ignore_errors	st_spool_name st_report_file
 endif
 
 delete(noerr) st_alias st spec_name

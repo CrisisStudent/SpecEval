@@ -4528,18 +4528,18 @@ endsub
 subroutine evaluation_report
 
 '1. Creating spool
-delete(noerr) sp_spec_evaluation
-spool sp_spec_evaluation
+delete(noerr) {st_spool_name}
+spool {st_spool_name}
 
 ' 2.  Regression output
 if @instr(@upper(st_exec_list),"REG_OUTPUT") and {st_spec_name}.@type<>"STRING" then
 	call regression_output_adjusted(st_spec_name)
-	sp_spec_evaluation.insert(name=regression_output) tb_reg_output
+	{st_spool_name}.insert(name=regression_output) tb_reg_output
 
 	%obj_name =  "Regression output"
 	%obj_desc = "- Coefficients: blue=negative; orange=positive \n - Tstats/pvals: green=significant,red=insignificant,yellow=marginally significant"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment regression_output %comment
+	{st_spool_name}.comment regression_output %comment
 
 	%intermediate_objects = %intermediate_objects +  " " + "tb_reg_output"  + " "
 endif
@@ -4550,12 +4550,12 @@ if @upper(st_outofsample)="T" and @instr(@upper(st_exec_list),"STABILITY") then
 	call coefficient_stability
 
 	if @isobject("gp_coef_stability") then
-		sp_spec_evaluation.insert(name=coefficient_stability) gp_coef_stability
+		{st_spool_name}.insert(name=coefficient_stability) gp_coef_stability
 		
 		%obj_name =  "Coefficient stability graphs" 
 		%obj_desc = "- Coefficients based on increasing estimation sample with 2 standard deviation error bands"  
 		call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
- 		sp_spec_evaluation.comment coefficient_stability %comment
+ 		{st_spool_name}.comment coefficient_stability %comment
 	endif	
 endif	
 
@@ -4565,7 +4565,7 @@ if @upper(st_outofsample)="T" and @instr(@upper(st_exec_list),"STABILITY") then
 	call auto_orders
 
 	if @isobject("gp_lag_orders") then
-		sp_spec_evaluation.insert(name=Lag_orders) gp_lag_orders
+		{st_spool_name}.insert(name=Lag_orders) gp_lag_orders
 		
 		%obj_name =  "Automatically selected lag orders" 
 		%obj_desc = "- Automatically selected number of lags " 
@@ -4577,18 +4577,18 @@ if @upper(st_outofsample)="T" and @instr(@upper(st_exec_list),"STABILITY") then
 		endif
 		%obj_desc = %obj_desc + "corresponding to different estimation samples (dates indicate end of estiamtion sample)"
 		call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
- 		sp_spec_evaluation.comment Lag_orders %comment
+ 		{st_spool_name}.comment Lag_orders %comment
 	endif	
 endif	
 
 ' 4. Performance metrics
 if @instr(@upper(st_exec_list),"METRICS") then
-	sp_spec_evaluation.insert(name=forecast_metrics) tb_performance_metrics
+	{st_spool_name}.insert(name=forecast_metrics) tb_performance_metrics
 
 	%obj_name =  "Forecast performance metrics" 
 	%obj_desc = "- Forecast metric based on all available forecast errors at given horizon \n - #=number of forecasts \n - Last column=average across horizons - \n - Sub-samples include only forecast that completely lie in given sub-sample"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment forecast_metrics %comment
+	{st_spool_name}.comment forecast_metrics %comment
 
 endif
 
@@ -4604,7 +4604,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 		%h = @word(st_horizons_graph,!h)
 
 		if @isobject("gp_forecasts_all_h" + %h) then
-			sp_spec_evaluation.insert(name=f_h{%h}) gp_forecasts_all_h{%h}
+			{st_spool_name}.insert(name=f_h{%h}) gp_forecasts_all_h{%h}
 			%h_include_list = %h_include_list + %h + " "		
 		endif
 	next
@@ -4613,7 +4613,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 	%obj_desc = "- blue with squares = actual historical series \n - dashed without symbol = individual forecasts \n - other solid = user-included series"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = "f_h" + @word(%h_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 endif
 
 	
@@ -4626,12 +4626,12 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 		%ss_name = "F_" + @mid(st_subsample{!SubSample}_start,3)+"_" + @mid(st_subsample{!SubSample}_end,3)
 		
 		if @isobject("gp_forecast_SubSample"+ @str(!SubSample)) then
-			sp_spec_evaluation.insert(name={%ss_name}) gp_forecast_SubSample{!SubSample}
+			{st_spool_name}.insert(name={%ss_name}) gp_forecast_SubSample{!SubSample}
 			%ss_include_list = %ss_name + " "
 		endif
 
 		if @isobject("gp_forecast_subsample"+ @str(!SubSample) + "_fd") then
-			sp_spec_evaluation.insert(name={%ss_name}_decomposition) gp_forecast_subsample{!subsample}_fd
+			{st_spool_name}.insert(name={%ss_name}_decomposition) gp_forecast_subsample{!subsample}_fd
 		endif
 	next	
 
@@ -4644,7 +4644,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%ss_include_list,1)
-	sp_spec_evaluation.comment  {%first_graph} %comment
+	{st_spool_name}.comment  {%first_graph} %comment
 
 endif
 
@@ -4658,7 +4658,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 		%h = @word(st_horizons_bias,!h)
 	
 		if @isobject("gp_forecasts_all_h" + %h) then
-			sp_spec_evaluation.insert(name=bias_h{%h}) gp_forecast_bias_h{%h}
+			{st_spool_name}.insert(name=bias_h{%h}) gp_forecast_bias_h{%h}
 			%h_include_list = %h_include_list + %h + " "
 		endif
 	next
@@ -4667,7 +4667,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 	%obj_desc = "- points=actual vs. forecast value \n - orange line = linear fit \n - dashed line = 45-degree line"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = "bias_h" + @word(%h_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 
 endif
 
@@ -4679,12 +4679,12 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
 	for %s {st_scenarios}	
 
 		if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
-			sp_spec_evaluation.insert(name={%s}_level) gp_csf_level_{%s}
+			{st_spool_name}.insert(name={%s}_level) gp_csf_level_{%s}
 			%s_include_list = %s_include_list + %s + "_level" + " "
 		endif
 
 		if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
-			sp_spec_evaluation.insert(name={%s}_transformation) gp_csf_trans_{%s}
+			{st_spool_name}.insert(name={%s}_transformation) gp_csf_trans_{%s}
 			%s_include_list = %s_include_list + %s + "_transformation" + " "
 		endif
 	next
@@ -4693,7 +4693,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") then
 	%obj_desc = "- blue with squares = scenario forecast based on given specification \n - orange with dash = original scenario forecast taken from workfile \n - green with dash-dot   = baseline scenario forecast based on given specification \n - other solid = user-included series \n - (model foreast = forecast based on given specification and workfile values of RHS variables; original forecast = scenario forecast taken from workfile)"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%s_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 
 endif
 
@@ -4702,12 +4702,12 @@ if @instr(@upper(st_exec_list),"SCENARIOS_ALL") then
 	%s_include_list = ""
 
 	if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
-		sp_spec_evaluation.insert(name=all_level) gp_csf_level_all
+		{st_spool_name}.insert(name=all_level) gp_csf_level_all
 		%s_include_list = %s_include_list + "all_level" + " "
 	endif
 
 	if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
-		sp_spec_evaluation.insert(name=all_transformation) gp_csf_trans_all
+		{st_spool_name}.insert(name=all_transformation) gp_csf_trans_all
 		%s_include_list = %s_include_list + "all_transformation" + " "
 	endif
 
@@ -4715,7 +4715,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_ALL") then
 	%obj_desc = "- Model scenario forecast (= forecast based on given specification and workfile values of RHS variables) for all scenarios "  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%s_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 
 endif
 
@@ -4726,12 +4726,12 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @wcount(st_scenarios)>1 then
 	for %s {st_scenarios}
 
 		if @isobject("gp_csf_fd_"+ %s) then
-			sp_spec_evaluation.insert(name={%s}_decomposition) gp_csf_fd_{%s}
+			{st_spool_name}.insert(name={%s}_decomposition) gp_csf_fd_{%s}
 			%s_include_list = %s_include_list + %s + "_decomposition" + " "
 		endif
 
 		if @isobject("gp_csf_fdd_"+ %s) then
-			sp_spec_evaluation.insert(name={%s}_decomposition_diff)  gp_csf_fdd_{%s}
+			{st_spool_name}.insert(name={%s}_decomposition_diff)  gp_csf_fdd_{%s}
 			%s_include_list = %s_include_list + %s + "_decomposition_diff" + " "
 		endif
 	next
@@ -4748,7 +4748,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @wcount(st_scenarios)>1 then
 	%first_graph = @word(%s_include_list,1)
 
 	if @wcount(%s_include_list)>0 then
-		sp_spec_evaluation.comment {%first_graph}  %comment
+		{st_spool_name}.comment {%first_graph}  %comment
 	endif
 
 endif
@@ -4762,7 +4762,7 @@ if @instr(@upper(st_exec_list),"SHOCKS_VARIABLES") then
 
 	for !sv = 1 to @wcount(st_shock_variables)
 		%sv = @word(st_shock_variables,!sv)
-		sp_spec_evaluation.insert(name=sr_{%sv}) gp_sr_{%sv}
+		{st_spool_name}.insert(name=sr_{%sv}) gp_sr_{%sv}
 		%s_include_list = %s_include_list + "sr_" + %sv + " "
 	next
 
@@ -4770,7 +4770,7 @@ if @instr(@upper(st_exec_list),"SHOCKS_VARIABLES") then
 	%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked independent variable \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single independent variable, orange)"
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%s_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 
 endif
 
@@ -4780,7 +4780,7 @@ if @instr(@upper(st_exec_list),"SHOCKS_REGRESSORS") then
 	%s_include_list = ""
 
 	for !r = 1 to @wcount(st_regressor_list)
-		sp_spec_evaluation.insert(name=sr_reg{!r}) gp_sr_reg{!r}
+		{st_spool_name}.insert(name=sr_reg{!r}) gp_sr_reg{!r}
 		%s_include_list = %s_include_list + "sr_reg" + @str(!r) + " "
 	next
 
@@ -4788,7 +4788,7 @@ if @instr(@upper(st_exec_list),"SHOCKS_REGRESSORS") then
 	%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked regressors \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single regressor, orange)"
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	%first_graph = @word(%s_include_list,1)
-	sp_spec_evaluation.comment {%first_graph}  %comment
+	{st_spool_name}.comment {%first_graph}  %comment
 
 endif
 
@@ -5535,7 +5535,7 @@ subroutine results_aliasing(string %sub_alias)
 
 ' Spool objects
 if sc_spec_count>1 then
-	%object_list = "sp_spec_evaluation tb_performance_metrics tb_reg_output"
+	%object_list = st_spool_name + " tb_performance_metrics tb_reg_output"
 else
 	%object_list = ""
 endif
@@ -5657,20 +5657,20 @@ endsub
 subroutine evaluation_multireport
 
 ' 1. Individual reports aggregated
-delete(noerr) sp_spec_evaluation_specs
-spool sp_spec_evaluation_specs
+delete(noerr) {st_spool_name}_specs
+spool {st_spool_name}_specs
 
 for !spec_id = 1 to sc_spec_count
 
 	call spec_alias
 
-	sp_spec_evaluation_specs.insert(name=spec_{st_alias}) sp_spec_evaluation_{st_alias}	
+	{st_spool_name}_specs.insert(name=spec_{st_alias}) {st_spool_name}_{st_alias}	
 next
 	 
 ' 2. Cross-equation performance report
 
-delete(noerr) sp_spec_evaluation
-spool sp_spec_evaluation
+delete(noerr) {st_spool_name}
+spool {st_spool_name}
 
 '2.1 Regression outputs
 if @instr(@upper(st_exec_list),"REG_OUTPUT") then
@@ -5680,13 +5680,13 @@ if @instr(@upper(st_exec_list),"REG_OUTPUT") then
 	
 	call insert_specs("sp_outputs","tb_reg_output", st_use_names)	
 
-	sp_spec_evaluation.insert(name=regression_outputs) sp_outputs
+	{st_spool_name}.insert(name=regression_outputs) sp_outputs
 	delete(noerr) sp_outputs
 
 	%obj_name =  "Regression outputs"
 	%obj_desc = "- Coefficients: blue=negative; orange=positive \n - Tstats/pvals: green=significant,red=insignificant,yellow=marginal"  
 	call comment_string(%obj_name,%obj_desc,"n", st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment regression_outputs %comment
+	{st_spool_name}.comment regression_outputs %comment
 
 endif
 
@@ -5697,13 +5697,13 @@ if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
 	spool sp_stability
 	call insert_specs("sp_stability","gp_coef_stability", st_use_names)
 	
-	sp_spec_evaluation.insert(name=coefficient_stability) sp_stability
+	{st_spool_name}.insert(name=coefficient_stability) sp_stability
 	delete(noerr) sp_stability
 
 	%obj_name =  "Coefficient stability graphs" 
 	%obj_desc = "- Coefficients based on increasing estimation sample with 2 standard deviation error bands"  
 	call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
- 	sp_spec_evaluation.comment coefficient_stability %comment
+ 	{st_spool_name}.comment coefficient_stability %comment
 
 endif
 
@@ -5717,13 +5717,13 @@ if @upper(st_outofsample)= "T" and @instr(@upper(st_exec_list),"STABILITY") then
 
 
 	if sp_lag_orders.@count>0 then
-		sp_spec_evaluation.insert(name=lag_orders) sp_lag_orders
+		{st_spool_name}.insert(name=lag_orders) sp_lag_orders
 		delete(noerr) sp_lag_orders
 
 		%obj_name =  "Automatically selected lag orders" 
 		%obj_desc = "- Automatically selected number of lags (of autoregressive and moving average components for ARMA models; of dependent and independet variables for ARDL models)" 
 		call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
- 		sp_spec_evaluation.comment lag_orders %comment
+ 		{st_spool_name}.comment lag_orders %comment
 	else
 		delete(noerr) sp_lag_orders
 	endif
@@ -5767,13 +5767,13 @@ if @instr(@upper(st_exec_list),"METRICS") then
 	endif
 	
 	'Inserting into spool
-	sp_spec_evaluation.insert(name=performance_metrics) sp_performance_metrics
+	{st_spool_name}.insert(name=performance_metrics) sp_performance_metrics
 	delete(noerr) sp_performance_metrics
 
 	%obj_name =  "Forecast performance metrics" 
 	%obj_desc = "- Forecast metric based on all available forecast errors at given horizon \n - #=number of forecasts \n - Last column=average across horizons - \n - Sub-samples include only forecast that completely lie in given sub-sample"  
 	call comment_string(%obj_name,%obj_desc,"n",st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment performance_metrics %comment
+	{st_spool_name}.comment performance_metrics %comment
 
 
 endif
@@ -5881,7 +5881,7 @@ endif
 
 'Inserting into spool
 if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") or @instr(@upper(st_exec_list),"GRAPHS_SS") then
-	sp_spec_evaluation.insert(name=forecast_graphs) sp_forecast_graphs
+	{st_spool_name}.insert(name=forecast_graphs) sp_forecast_graphs
 	delete(noerr) sp_forecast_graphs
 endif
 
@@ -5918,13 +5918,13 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 	next
 	
 	'Inserting into spool
-	sp_spec_evaluation.insert(name=bias_graphs) sp_bias_graphs
+	{st_spool_name}.insert(name=bias_graphs) sp_bias_graphs
 	delete(noerr) sp_bias_graphs
 
 	%obj_name =  "Forecast bias graphs" 
 	%obj_desc = "- points=actual vs. forecast value \n - orange line = linear fit \n - dashed line = 45-degree line"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment bias_graphs  %comment
+	{st_spool_name}.comment bias_graphs  %comment
 
 endif
 
@@ -6010,7 +6010,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") or @instr(@upper(st_exec_
 	sp_csf.comment all  %comment
 	
 	' Inserting spool
-	sp_spec_evaluation.insert(name=conditional_scenarios) sp_csf
+	{st_spool_name}.insert(name=conditional_scenarios) sp_csf
 	delete(noerr) sp_csf
 
 endif
@@ -6066,7 +6066,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @instr(@upper(st_exec_list),
 	next
 	
 	' Inserting spool
-	sp_spec_evaluation.insert(name=scenario_decomposition) sp_decomposition
+	{st_spool_name}.insert(name=scenario_decomposition) sp_decomposition
 	delete(noerr) sp_csf sp_decomposition
 
 	%obj_name =  "Scenario forecast decomposition graphs" 
@@ -6077,7 +6077,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @instr(@upper(st_exec_list),
 	endif
 
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
-	sp_spec_evaluation.comment scenario_decomposition %comment
+	{st_spool_name}.comment scenario_decomposition %comment
 
 	delete(noerr) sp_decomposition 
 
@@ -6088,14 +6088,14 @@ endif
 if  @instr(@upper(st_exec_list),"SCENARIOS_MULTISPEC") then
 	call csf_multispec(st_include_baseline,st_include_original,st_transformation,st_use_names)
 
-	sp_spec_evaluation.insert(name=conditional_scenarios_ms)  sp_csfmsgraphs
+	{st_spool_name}.insert(name=conditional_scenarios_ms)  sp_csfmsgraphs
 	delete(noerr) sp_csfmsgraphs
 	
 	%obj_name =  "Conditional scenario forecast graphs - Multiple specifications" 
 	%obj_desc = "- blue with circles = Original baseline scenario forecast  \n - orange with squares = original scenario forecast  \n - other dashed = Individual specifications model scenario forecasts \n - (model forecast = forecast based on given specification and values of RHS variables without add-factors; original forecast = scenario forecast taken from workfile)"  
 	call comment_string(%obj_name,%obj_desc,"f",st_use_names,st_include_descriptions)
 
-	sp_spec_evaluation.comment conditional_scenarios_ms %comment
+	{st_spool_name}.comment conditional_scenarios_ms %comment
 endif
 
 ' 2.7 Shock response graphs
@@ -6197,7 +6197,7 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 	endif
 
 	' Inputting in master spool
-	sp_spec_evaluation.insert(name=shock_responses) sp_shock_responses
+	{st_spool_name}.insert(name=shock_responses) sp_shock_responses
 	delete(noerr) sp_shock_responses
 
 endif
@@ -6206,7 +6206,7 @@ endif
 if @upper(st_keep_objects)="F" then
 	for !spec_id = 1 to sc_spec_count
 		call spec_alias
-		delete(noerr)  sp_spec_evaluation_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} gp_forecast_subsample*_fd_{st_alias}  tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} gp_sr_*_{st_alias} gp_coef_stability_{st_alias} gp_lag_orders_{st_alias} sp_spec_evaluation_{st_alias} 
+		delete(noerr)  {st_spool_name}_{st_alias} gp_forecasts_all_h*_{st_alias} gp_forecast_subsample*_{st_alias} gp_forecast_subsample*_fd_{st_alias}  tb_performance_metrics*_{st_alias} tb_reg_output*_{st_alias} gp_coef_stability_{st_alias} gp_csf_*_{st_alias} gp_forecast_bias_*_{st_alias} gp_csf_fd_*_{st_alias} gp_sr_*_{st_alias} gp_coef_stability_{st_alias} gp_lag_orders_{st_alias} {st_spool_name}_{st_alias} 
 	next
 endif
 
@@ -6836,13 +6836,19 @@ endsub
 subroutine speceval_store
 
  ' Name and mode
-if sc_spec_count=1 then
-	%output_file_name = st_spec_name + "_specification_evaluation"
-	%pdf_mode = "i"
+if @isempty(st_report_file) then
+	if sc_spec_count=1 then
+		%output_file_name = st_spec_name + "_specification_evaluation"
+	else
+		%output_file_name = st_base_var + "_specification_evaluation"
+	endif
+	
+	st_report_file = %output_file_name
 else
-	%output_file_name = st_base_var + "_specification_evaluation"
-	%pdf_mode = "i"
+	%output_file_name = st_report_file
 endif
+
+%pdf_mode = "i"
 
 ' Comments
 if @upper(st_save_output)="D" then
@@ -6859,9 +6865,10 @@ else
 	%prompt = ""
 endif
 
-sp_spec_evaluation.save(t=pdf,mode={%pdf_mode},{%comments},{%prompt}) %output_file_name
+{st_spool_name}.save(t=pdf,mode={%pdf_mode},{%comments},{%prompt}) %output_file_name
 
 endsub
 
 ' ##################################################################################################################
+
 

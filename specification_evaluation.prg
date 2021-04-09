@@ -220,7 +220,6 @@ if !dogui=1 then
 		"check",!ignore_errors,"Ignore re-estimation errors", _
 		"check",!eliminate_multicol,"Eliminate perfroct multicolinearity issues in re-estimation")
 
-
 		'"check",!include_growth_rate,"Do you want to include growth rate results?", _
 '		"radio",!forecast_dep_var,"Variable to be forecasted","""Underlying variable"" ""Dependent variable of equation""", _
 
@@ -272,6 +271,8 @@ if !dogui=1 then
 	' Defaults
 	if @upper(st_load_gui_settings)<>"T" then
 		string  st_spec_alias_list  = ""
+		string st_spool_name = "sp_spec_evalaution"
+		string st_report_file = ""
 		!use_names = 0
 		!include_descriptions = 0
 		!keep_objects = 0
@@ -289,13 +290,16 @@ if !dogui=1 then
 		!result = @uidialog("caption","Store settings", _
 		"edit", st_spec_alias_list,"Enter list of specification aliases", 50, _
 		"check",!use_names,"Do you want to use equation names instead of aliases in output?", _
+		"radio",!save_output,"Save output","Yes ""Yes - with descriptions"" ""User dialog"" No", _
+		"edit", st_spool_name,"Enter name of the spool", 50, _
+		"edit", st_report_file,"Enter name/path  for the pdf report file", 50, _
+		"colbreak", _
 		"check",!keep_forecasts,"Do you want to keep forecast series?", _
 		"check",!keep_objects,"Do you want to keep intermediate objects?", _
 		"check",!keep_equations,"Do you want to keep reestiamted  equations?", _
 		"check",!keep_information,"Do you want to keep information objects?", _
 		"check",!keep_settings,"Do you want to keep setting objects?", _
-		"check",!store_gui,"Do you want to store GUI settings for next execution", _
-		"radio",!save_output,"Save output","Yes ""Yes - with descriptions"" ""User dialog"" No")
+		"check",!store_gui,"Do you want to store GUI settings for next execution")
 
 		if !result = -1 then 'will stop the program unless OK is selected in GUI
 			stop
@@ -327,7 +331,7 @@ if !dogui=1 then
 		tb_speceval_gui(1,1)  = "Settings parameter"
 		tb_speceval_gui(1,2)  = "Value"
 		
-		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_tfirst_shocks st_tlast_shocks st_tfirst_shockgraph st_horizons_graph st_horizons_bias  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  !ignore_errors !eliminate_multicol	st_base_var  st_noshock_scenario st_shock_scenario  !shock_type st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
+		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_tfirst_shocks st_tlast_shocks st_tfirst_shockgraph st_horizons_graph st_horizons_bias  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  !ignore_errors !eliminate_multicol	st_base_var  st_noshock_scenario st_shock_scenario  !shock_type st_spec_alias_list 	!use_names	!include_descriptions st_spool_name st_report_file !keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
 		
 		for !sp = 1 to @wcount(%settings_parameters)
 			%sp = @word(%settings_parameters,!sp)
@@ -436,6 +440,9 @@ if !dogui=0 then
 	
 	
 	' Store options
+	string st_spool_name = @equaloption("SPOOL_NAME")	
+	string st_report_file = @equaloption("REPORT_FILE")
+
 	string st_keep_objects = @equaloption("KEEP_OBJECTS")	
 	string st_keep_forecasts = @equaloption("KEEP_FORECASTS")	
  	string st_keep_equations =  @equaloption("KEEP_EQS")		
@@ -474,6 +481,10 @@ if !dogui=0 then
 
 	if @isempty(st_include_baseline) then
 		st_include_original = "t"
+	endif
+
+	if @isempty(st_spool_name) then
+		st_spool_name = "sp_spec_evaluation"
 	endif
 	
 	if @isempty(st_keep_objects) then
