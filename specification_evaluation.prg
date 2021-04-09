@@ -84,7 +84,7 @@ if !dogui=1 then
 		"edit",st_horizons_metrics,"Enter the list of horizons", _
 		"edit",st_scenarios,"Enter list of scenarios", _ 
 		"check",!date_settings,"Change date settings", _
-		"check",!advanced_options,"Change andvanced options", _
+		"check",!advanced_options,"Change advanced options", _
 		"check",!store_settings,"Change store settings")
 	
 	' Stopping if user exited
@@ -111,6 +111,9 @@ if !dogui=1 then
 		string st_tfirst_scenarios = ""
 		string st_tlast_scenarios = ""
 		string st_tfirst_sgraph = ""
+		string  st_tfirst_shocks = ""
+		string  st_tlast_shocks = ""
+		string st_tfirst_shockgraph = ""
 	endif
 
 	if !date_settings = 1 then
@@ -120,10 +123,13 @@ if !dogui=1 then
 		"edit",st_tlast_backtest_user,"Enter ending date of backtesting", 10, _
 		"edit",st_tfirst_graph_user,"Enter starting date of backcasting graphs", 10, _
 		"edit",st_tlast_graph_user,"Enter ending date of backcasting graphs", 10, _
+		"edit",st_SubSamples,"Enter list of forecast sub-samples", 100, _
 		"edit",st_tfirst_scenarios,"Enter starting date of scenarios", 10, _
 		"edit",st_tlast_scenarios,"Enter ending date of scenarios", 10, _
 		"edit",st_tfirst_sgraph,"Enter starting date of scenario graphs", 10, _
-		"edit",st_SubSamples,"Enter list of forecast sub-samples", 100)		
+		"edit",st_tfirst_shocks,"Enter starting date of scenarios", 10, _
+		"edit",st_tlast_shocks,"Enter ending date of scenarios", 10, _
+		"edit",st_tfirst_shockgraph,"Enter starting date of scenario graphs", 10)		
 		
 	endif
 
@@ -156,6 +162,9 @@ if !dogui=1 then
 		string st_add_scenarios = "" 
 		!include_original = 1 
 		!include_baseline = 1 
+		string st_noshock_scenario = ""
+		string st_shock_scenario = ""
+		!shock_type = 2
 		!auto_selection = 0
 		!custom_reestimation = 0
 		string st_eq_list_add = ""
@@ -170,7 +179,7 @@ if !dogui=1 then
 	if !advanced_options = 1 then
 
 		' Dialog
-		!result = @uidialog("caption","Advanced options", _
+		!result = @uidialog("caption","Metric and graph options", _
 		"text","PERFORMANCE METRIC OPTIONS", _ 
 		"edit",st_horizons_graph,"Enter the list of graph horizons", _
 		"edit",st_horizons_bias,"Enter the list of bias graph horizons", _
@@ -179,32 +188,41 @@ if !dogui=1 then
 		"check",!include_mae,"MAE", _
 		"check",!include_bias,"BIAS", _
 		"radio",!percentage_error,"Do you want to use percentage errors?","Auto Yes No", _
-		"text","=========================", _
-		"text","", _
+		"Colbreak", _
 		"text","PERFORMANCE GRAPH OPTIONS", _	
 		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Index ""Deviation from baseline""", _
 		"edit",st_graph_benchmark,"Enter name of series you wish to use as spread/ratio benchmark", _
 		"edit",st_index_period,"Enter index period date", _
-		"radio",!forecast_dep_var,"Variable to be forecasted","""Underlying variable"" ""Dependent variable of equation""", _
 		"edit",st_graph_add_backtest,"Enter the list of series to include in backtest graphs",100, _
 		"edit",st_graph_add_scenarios,"Enter the list of series to include in scenario graphs",100, _
 		"check",!include_original,"Include original forecast in scenario graphs", _
 		"check",!include_baseline,"Include baseline forecast in scenario graphs", _
-		"edit",st_add_scenarios,"Enter the list of additional scenarios to be included in scenario graphs",100, _
+		"edit",st_add_scenarios,"Enter the list of additional scenarios to be included in scenario graphs",100)
+
+		!result = @uidialog("caption","Forecast options", _
+		"edit",st_base_var,"Enter base variable mnemonic (not applicable for equations)", _
+		"text","SHOCK RESPONSE OPTIONS", _	
+		"edit",st_noshock_scenario,"Enter alias of scenario used as base scenario for shock graphs", _ 
+		"edit",st_shock_scenario,"Enter alias of scenario used as base scenario for shock graphs", _ 
+		"radio",!shock_type,"Shock type","Transitory Permanent", _
 		"text","=========================", _
-		"text","", _
-		"text","FORECAST OPTIONS", _
-		"check",!auto_selection,"Should automatic model selection be performed?", _
-		"check",!custom_reestimation,"Should custom reestimation be used?", _
+		"Colbreak", _
+		"text","UNCONDITIONAL FORECAST OPTIONS", _	
 		"edit",st_eq_list_add,"Enter list of additional equations/identities for RHS variables", _
 		"edit",st_model_name_add,"Enter name of model object which contains equations/identitie for RHS variables", _
 		"edit",st_forecasted_ivariables,"Enter list of independent variables fowr which forecasts should be used ", _ 
+		"text","=========================", _
+		"text","", _
+		"text","FORECAST PROCESS OPTIONS", _	
+		"check",!auto_selection,"Should automatic model selection be performed?", _
+		"check",!custom_reestimation,"Should custom reestimation be used?", _
 		"check",!scenario_dataload,"Load missing scenario data from databases", _
-		"check",!ignore_errors,"Ignore re-estiamtion errors", _
-		"check",!eliminate_multicol,"Eliminate perfroct multicolinearity issues in re-estimation", _
-		"edit",st_base_var,"Enter base variable mnemonic (not applicable for equations)")
+		"check",!ignore_errors,"Ignore re-estimation errors", _
+		"check",!eliminate_multicol,"Eliminate perfroct multicolinearity issues in re-estimation")
+
 
 		'"check",!include_growth_rate,"Do you want to include growth rate results?", _
+'		"radio",!forecast_dep_var,"Variable to be forecasted","""Underlying variable"" ""Dependent variable of equation""", _
 
 		' Stopping if user exited
 		if !result = -1 then 'will stop the program unless OK is selected in GUI
@@ -221,6 +239,12 @@ if !dogui=1 then
 		endif
 	next		
 	
+	if !shock_type = 1 then
+		string st_shock_type = "transitory"
+	else
+		string st_shock_type = "permanent"
+	endif
+
 	string st_percentage_error = @word("AUTO T F",!percentage_error)
 			
 	string st_transformation = @word("level growth spread ratio log index deviation",!transformation)
@@ -303,7 +327,7 @@ if !dogui=1 then
 		tb_speceval_gui(1,1)  = "Settings parameter"
 		tb_speceval_gui(1,2)  = "Value"
 		
-		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_horizons_graph st_horizons_bias  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  !ignore_errors !eliminate_multicol	st_base_var  st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
+		%settings_parameters = "st_exec_list_user !forecast_type st_horizons_metrics st_specification_list st_scenarios st_ignore_errors !date_settings !advanced_options !store_settings st_tfirst_backtest_user st_tlast_backtest_user st_tfirst_graph_user st_tlast_graph_user st_SubSamples st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph st_tfirst_shocks st_tlast_shocks st_tfirst_shockgraph st_horizons_graph st_horizons_bias  !include_rmse 	!include_mae  	!include_bias   	!percentage_error  	!transformation  	st_graph_benchmark  	st_index_period  	!include_growth_rate  	!forecast_dep_var  	st_graph_add_backtest  	st_graph_add_scenarios  	!include_original   	!include_baseline   	!auto_selection  	!custom_reestimation  	st_add_scenarios  	st_eq_list_add  	st_model_name_add  	st_forecasted_ivariables  	!scenario_dataload  !ignore_errors !eliminate_multicol	st_base_var  st_noshock_scenario st_shock_scenario  !shock_type st_spec_alias_list 	!use_names	!include_descriptions	!keep_objects	!keep_forecasts	!keep_equations	!keep_information	!keep_settings !store_gui	!save_output" 
 		
 		for !sp = 1 to @wcount(%settings_parameters)
 			%sp = @word(%settings_parameters,!sp)
@@ -338,6 +362,9 @@ if !dogui=0 then
 	string st_forecasted_ivariables = @equaloption("FORECASTED_IVARIABLES")
 	
 	string st_scenarios = @equaloption("SCENARIOS")
+	string st_noshock_scenario = @equaloption("NOSHOCK_SCENARIO")
+	string st_shock_scenario = @equaloption("SHOCK_SCENARIO")
+	string st_shock_type = @equaloption("SHOCK_TYPE")
 
 	string st_exec_list_user = @equaloption("EXEC_LIST")
 							
@@ -349,7 +376,10 @@ if !dogui=0 then
 	string  st_tfirst_scenarios = @equaloption("TFIRST_SCENARIOS")
 	string  st_tlast_scenarios = @equaloption("TLAST_SCENARIOS")
 	string st_tfirst_sgraph = @equaloption("TFIRST_SGRAPH")
-	
+	string  st_tfirst_shocks = @equaloption("TFIRST_SHOCKS")
+	string  st_tlast_shocks = @equaloption("TLAST_SHOCKS")
+	string st_tfirst_shockgraph = @equaloption("TFIRST_SHOCKGRAPH")
+
 	string st_SubSamples = @equaloption("SubSamples") 
 
 	'Advanced metrics and graphs options
@@ -424,6 +454,10 @@ if !dogui=0 then
 		
 	if @isempty(st_transformation) or (@upper(st_transformation)<>"GROWTH" and @upper(st_transformation)<>"INDEX" and @upper(st_transformation)<>"SPREAD" and @upper(st_transformation)<>"RATIO" and @upper(st_transformation)<>"DEVIATION" and @upper(st_transformation)<>"LOG")  then
 		string st_transformation = "level"  
+	endif
+
+	if @isempty(st_shock_type) then
+		st_shock_type = "permanent"
 	endif
 	
 	if @isempty(st_forecast_dep_var) then

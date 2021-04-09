@@ -82,7 +82,7 @@ for !spec_id = 1 to sc_spec_count
 
 	if @instr(@upper(st_exec_list),"SHOCKS") then
 		statusline Shock response graphs
-		call shock_responses(st_spec_name,st_base_var,st_tfirst_shocks,st_tlast_shocks,st_tfirst_shockgraph,st_base_scenario,st_percetage_error,st_transforamtion,st_forecast_depvar,sc_addd_eq_count)
+		call shock_responses(st_spec_name,st_base_var,st_tfirst_shocks,st_tlast_shocks,st_tfirst_shockgraph,st_noshock_scenario,st_shock_scenario,st_shock_type,st_percentage_error,st_transformation,st_forecast_dep_var,sc_add_eq_count,(@instr(@upper(st_exec_list),"SHOCKS_VARIABLES")>0),(@instr(@upper(st_exec_list),"SHOCKS_REGRESSORS")>0))
 	endif
 		
 	' ##########################################
@@ -150,10 +150,11 @@ if @upper(st_keep_settings)="F" then
 	st_include_bias st_include_mae st_include_rmse st_percentage_error _
 	st_auto_selection st_custom_reestimation st_forecast_dep_var st_include_growth_rate _
 	st_scenarios st_scenario_dataload st_tfirst_scenarios st_tlast_scenarios st_tfirst_sgraph _
+	st_noshock_scenario st_shock_scenario st_tfirst_shocks st_tlast_shocks st_tfirst_shockgraph _
 	st_graph_add_backtest st_graph_add_scenarios st_include_baseline st_include_original st_add_scenarios st_index_period st_graph_benchmark _
 	st_eq_list_add sc_add_eq_count st_model_name_add st_forecasted_ivariables _ 
 	st_keep_objects st_keep_equations st_keep_forecasts st_keep_settings st_keep_information st_use_names st_save_output st_include_descriptions _
-	st_exec_list st_exec_list_user st_ignore_errors
+	st_exec_list st_exec_list_user st_eliminate_multicol st_ignore_errors	
 endif
 
 delete(noerr) st_alias st spec_name
