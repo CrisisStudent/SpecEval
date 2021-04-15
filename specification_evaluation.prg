@@ -1,25 +1,25 @@
-' ##########################
-' ##### 1.0 Settings ###########
-' ##########################
+' 1. Performing preliminary checks
 
-' Check if exist in current location or include from default location
+' Page frequency
+'if @upper(@pagefreq) = "U" or @ispanel then
+'	@uiprompt("Procedure must be run on a time-series page.")
+'	stop
+'endif
 
-%add_in_path = @linepath 
-
-mode quiet
-
-'--- Set the log mode ---'		
-!debug = 1 'set to 1 if you want the logmsgs to display
-if !debug = 0 then
-	logmode +addin
-else
-	logmode logmsg
+' Eviews version
+if @vernum < 10 then
+	@uiprompt("EViews version 10.0 or higher is required to run this add-in.")
+	stop
 endif
 
+' 2. Executing user settings
 call speceval_user_settings
 
+' 3. Creating list of subroutines to be included
+%add_in_path = @linepath 
 call include_list
 
+' 4. Executing execution file
 %exec_file_name = "speceval_exec.prg"
 %exec_file_path  = %add_in_path + "subroutines\" + %exec_file_name
 exec %exec_file_path
