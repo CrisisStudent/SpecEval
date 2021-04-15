@@ -2460,7 +2460,7 @@ if !forecast_horizon_adjust = 1 then
 	if @isobject("st_horizons_metrics") then
 		delete(noerr) st_horizons_metrics_o
 		rename st_horizons_metrics st_horizons_metrics_o
-		 st_horizons_metrics = %sub_horizons_metrics
+		string st_horizons_metrics = %sub_horizons_metrics
 	endif 
 endif
 
