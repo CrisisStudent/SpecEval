@@ -8,8 +8,7 @@
 
 ' Eviews version
 if @vernum < 10 then
-	@uiprompt("EViews version 10.0 or higher is required to run this add-in.")
-	stop
+	@uiprompt("This add-in was developed on EViews version 10. It might not work on lower versions.")
 endif
 
 ' 2. Executing user settings
