@@ -86,6 +86,11 @@ if !dogui=1 then
 		"check",!date_settings,"Change date settings", _
 		"check",!advanced_options,"Change advanced options", _
 		"check",!store_settings,"Change store settings")
+
+	' Dealing with unnamed equations
+	if st_specification_list="*" then
+		st_specification_list = "_this"
+	endif
 	
 	' Stopping if user exited
 	if !result = -1 then 'will stop the program unless OK is selected in GUI

@@ -107,6 +107,11 @@ call  exec_list_implementation
 'Base variable
 if @isempty("st_base_var")=0 then
 	%spec_name = _this.@name
+
+	if @isempty(%spec_name) then
+		%spec_name = "_this"	
+	endif
+
 	call  base_var_ident(%spec_name)
 endif
 
