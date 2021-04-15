@@ -10,4 +10,5 @@ addin(type="string",menu="Specifiation(s) evaluation",proc="speceval",docs=".\do
 ' FcastDecomp reminder
 @uiprompt("Make sure you also install FcastDecomp add-in if you plan to use forecast decomposition functionality of SpecEval.","O")
 
+@uiprompt("Check if the identity add-in was installed with correct type by clicking edit the add-in in the add-in menu.")
 
