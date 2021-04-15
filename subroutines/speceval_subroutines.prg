@@ -976,7 +976,7 @@ call sample_boundaries_adjust(st_spec_name,st_outofsample,st_auto_selection,"","
 ' Additional equations
 for !add_eq = 1 to sc_add_eq_count
 	
-	if @upper(st_add_eq_type{!add_eq})="EQUATION" then
+'	if @upper(st_add_eq_type{!add_eq})="EQUATION" then
 		
 		if @upper(st_add_eq_auto{!add_eq})="T" then
 			call sample_boundaries(st_add_eq_name{!add_eq},"t","t")
@@ -992,7 +992,7 @@ for !add_eq = 1 to sc_add_eq_count
 						
 			call sample_boundaries_adjust(st_add_eq_name{!add_eq},st_outofsample,st_add_eq_auto{!add_eq},"add" + @str(!add_eq),"t")
 	
-		endif
+'		endif
 	endif
 next
 
@@ -1195,6 +1195,22 @@ if @dtoo(%tlast_lhs)>@dtoo(%tlast_rhs) then
 else
 	%tlast = %tlast_lhs
 endif 	
+
+table tb_sb_{%sub_identity_name}
+tb_sb_{%sub_identity_name}(1,1) = "Equation side"
+tb_sb_{%sub_identity_name}(1,2) = "Start date"
+tb_sb_{%sub_identity_name}(1,3) = "End date"
+
+tb_sb_{%sub_identity_name}(2,1) = "LHS"
+tb_sb_{%sub_identity_name}(3,1) = "RHS"
+
+tb_sb_{%sub_identity_name}(2,2) = %tfirst_lhs
+tb_sb_{%sub_identity_name}(2,3) = %tlast_lhs
+
+tb_sb_{%sub_identity_name}(3,2) = %tfirst_rhs
+tb_sb_{%sub_identity_name}(3,3) = %tlast_rhs
+
+tb_sb_{%sub_identity_name}.sort(A2:C3) c
 
 %intermediate_objects = %intermediate_objects + "s_lhs s_rhs" + " "
 
@@ -3273,6 +3289,7 @@ call missing_scen_variables
 
 ' 6. Defining forecasting sample
 
+' Start date
 if @isobject("tb_sb_" + st_spec_name)=0 then
 	call sample_boundaries(st_spec_name,"f","f")	
 endif
@@ -3285,6 +3302,23 @@ else
 	st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_spec_name}(2,3))+1)
 endif
 
+' Adjusting start date in case of additional equations
+if @isobject("sc_add_eq_count") then
+	if sc_add_eq_count>0 then
+		for !add_eq = 1 to sc_add_eq_count
+
+			if @isobject("tb_sb_" + st_add_eq_name{!add_eq})=0 then
+				call sample_boundaries(st_add_eq_name{!add_eq},"f","f")	
+			endif
+
+			if @dtoo(tb_sb_{st_add_eq_name{!add_eq}}(2,3))<@dtoo(st_tfirst_scenarios) then
+				st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_add_eq_name{!add_eq}}(2,3))+1)
+			endif	
+		next
+	endif
+endif
+
+' Graph start date
 if @isempty(st_tfirst_sgraph) then
 '	if @isobject("st_tfirst_backtest") then
 '		st_tfirst_sgraph = st_tfirst_backtest
