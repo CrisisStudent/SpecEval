@@ -3,6 +3,6 @@
 <path>specification_evaluation.prg</path>
 <version>1.0</version>
 <description>Performs evaluation of (forecasting properties of) equation/VAR/identity object(s) and prepares report summarizing the results.</description>
-<link>https://github.com/CrisisStudent/SpecEval/blob/master/Package/SpecEval.aipz</link>
+<link>https://raw.githubusercontent.com/CrisisStudent/SpecEval/master/Package/SpecEval.aipz</link>
 <pubDate>4 Apr 2021</pubDate>
 </item>
