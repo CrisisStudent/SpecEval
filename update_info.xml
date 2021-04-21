@@ -1,5 +1,5 @@
 <item>
-<title>SpecEval</title>
+<title>speceval</title>
 <path>specification_evaluation.prg</path>
 <version>1.0</version>
 <description>Performs evaluation of (forecasting properties of) equation/VAR/identity object(s) and prepares report summarizing the results.</description>
