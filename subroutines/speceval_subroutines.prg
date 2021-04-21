@@ -667,7 +667,52 @@ if @upper(st_keep_equations)="F" then
 	next
 endif	
 
-' 3. Cleaning up process information objects
+' 3. Cleaning up other objects
+if @upper(st_keep_objects)="F" and sc_spec_count=1 then
+
+	delete(noerr)   tb_performance_metrics
+
+	for %h {st_horizons_graph}
+		delete(noerr) gp_forecasts_all_h{%h}
+	next
+
+	for %h {st_horizons_bias}
+		delete(noerr) gp_forecast_bias_h{%h}
+	next
+
+	for !ss = 1 to sc_subsample_count
+		delete(noerr) gp_forecast_subsample{!ss}
+		delete(noerr) gp_forecast_subsample{!ss}_fd
+	next	
+
+	if @isempty(st_scenarios)=0 then
+		for %s {st_scenarios} all
+			delete(noerr) gp_csf_*_{%s}
+		next
+	endif
+
+	if @isobject("st_shock_variables") then
+		if @wcount(st_shock_variables)>0 then
+			for %sv {st_shock_variables}
+				delete(noerr) gp_sr_{%sv}
+			next
+		endif
+	endif
+
+	if @isobject("st_regressor_list") then
+		for !r = 1 to @wcount(st_regressor_list)
+			delete(noerr) gp_sr_reg{!r}
+		next
+	endif	
+endif
+
+delete(noerr) gr_regs s_history_series
+
+if @isobject(%sub_spec_name) then
+	delete(noerr) gr_{%sub_spec_name}_regs
+endif 
+
+' 4. Cleaning up process information objects
 if @upper(st_keep_information)="F" then
 	delete(noerr) st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_{%sub_spec_name} sc_forecastp_n sc_backtest_start_shift st_exog_variables st_auto_type  st_auto_info sc_maxlag sp_var_model_selection s_laglength st_shock_variables st_regressor_list st_shock_transformations
 	
@@ -692,38 +737,7 @@ if @upper(st_keep_information)="F" then
 '	endif
 endif
 
-' 4. Cleaning up other objects
-if @upper(st_keep_objects)="F" and sc_spec_count=1 then
-
-	delete(noerr)   tb_performance_metrics
-
-	for %h {st_horizons_graph}
-		delete(noerr) gp_forecasts_all_h{%h}
-	next
-
-	for %h {st_horizons_bias}
-		delete(noerr) gp_forecast_bias_h{%h}
-	next
-
-	for !ss = 1 to sc_subsample_count
-		delete(noerr) gp_forecast_subsample{!ss}
-		delete(noerr) gp_forecast_subsample{!ss}_fd
-	next	
-
-	if @isempty(st_scenarios)=0 then
-		for %s {st_scenarios} all
-			delete(noerr) gp_csf_*_{%s}
-		next
-	endif
-endif
-
-delete(noerr) gr_regs s_history_series
-
-if @isobject(%sub_spec_name) then
-	delete(noerr) gr_{%sub_spec_name}_regs
-endif 
-
-' Restoring
+' 5. Restoring modified option
 if @upper(%restore_auto_selection)="T" then
 	st_auto_selection = "T"
 endif
@@ -4037,7 +4051,7 @@ endif
 'Independent variables
 delete(noerr) gr_regs
 {%sub_eq_name}.makeregs gr_regs	
-string st_shock_variables = gr_regs.@depends
+string st_shock_variables = @wunique(gr_regs.@depends)
 string st_shock_variables = @replace(" "+ @upper(st_shock_variables) + " "," "+ @upper(%sub_base_var)+ " "," ")
 
 if @wcount(st_shock_variables)=0 then
@@ -4331,7 +4345,7 @@ endif
 
 if !sub_include_regshocks=1 then
 
-' 6.1. Creating shock paths
+' 7.1. Creating shock paths
 if @isobject("st_shock_transformations")=0 then
 	string st_shock_transformations = ""
 else
@@ -4362,13 +4376,13 @@ for !r = 1 to @wcount(st_regressor_list)
 		if @upper(%trend_present)="F" then
 			%shock_transformation = "level"
 		else
-			if @min({%ShockVar})>0 then
+			if @min(s_reg{!r})>0 then
 				%shock_transformation = "dlog"
 			else
 				%shock_transformation = "difference"
 			endif
 		endif
-	
+		
 		st_shock_transformations= st_shock_transformations + %reg + "=" + %shock_transformation + ", "
 		%reg{!r}_trans = %shock_transformation
 	
