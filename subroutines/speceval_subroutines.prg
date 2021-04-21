@@ -5666,8 +5666,10 @@ if @upper(st_keep_forecasts)="T" then
 endif
 
 'Information objectys
+%object_list = %object_list +" " +  "st_shock_variables st_regressor_list" + " "
+
 if @upper(st_keep_information)="T" then
-	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength st_shock_variables st_regressor_list st_shock_transformations"
+	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength st_shock_transformations"
 
 	if @isempty(st_scenarios)=0 then
 		for %s {st_scenarios}
@@ -6028,7 +6030,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") or @instr(@upper(st_exec_
 						%eq_name = @word(st_specification_list,!spec_id)
 						%heading = %heading + " -  " + %eq_name
 					else
-						%heading = %heading + " - Equation "+ st_alias
+						%heading = %heading + " - Specification "+ st_alias
 					endif
 					
 					gp_csf_{%type}_{%s}_{st_alias}.addtext(t) {%heading}
@@ -6093,7 +6095,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @instr(@upper(st_exec_list),
 						%eq_name = @word(st_specification_list,!spec_id)
 						%heading = %heading + " -  " + %eq_name
 					else
-						%heading = %heading + " - Equation "+ st_alias
+						%heading = %heading + " - Specification "+ st_alias
 					endif
 					
 					gp_csf_{%type}_{%s}_{st_alias}.addtext(t) {%heading}

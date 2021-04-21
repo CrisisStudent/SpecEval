@@ -137,7 +137,7 @@ endif
 ' ############################################
 
 if @upper(st_keep_information)="F" then	
-	delete(noerr) st_auto_type tb_equation_list
+	delete(noerr) st_auto_type tb_equation_list st_shock_variables_* st_regressor_list_*
 endif
 
 if @upper(st_keep_settings)="F" then	
