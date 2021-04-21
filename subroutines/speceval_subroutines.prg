@@ -5854,7 +5854,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - {%eq_name}
 				else
-					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - Equation {st_alias}
+					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - Specification {st_alias}
 				endif
 
 				call insert_spec("sp_forecast_graphs_"+ %fh,"gp_forecasts_all_h" + %fh, st_use_names)
@@ -5892,7 +5892,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - {%eq_name}
 				else
-					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - Equation {st_alias}
+					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - Specification {st_alias}
 				endif
 
 				call insert_spec("sp_subsample" + @str(!ss),"gp_forecast_subsample" + @str(!ss), st_use_names)
@@ -5958,7 +5958,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - {%eq_name}
 				else
-					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - Equation {st_alias}
+					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - Specification {st_alias}
 				endif
 				
 				call insert_spec("sp_bias_graphs_"+ %fh,"gp_forecast_bias_h" + %fh, st_use_names)
