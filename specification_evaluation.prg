@@ -73,6 +73,10 @@ if !dogui=1 then
 		!date_settings = 0
 		!advanced_options = 0
 		!store_settings = 0
+	else
+		if @instr("  " + @upper(st_specification_list) + " ","  " + @upper(_this.@name) + " ")=0 or @isempty(@upper(_this.@name)) then 
+			string st_specification_list = _this.@name + "*"
+		endif
 	endif
 		
 	'Basic settings dialog
@@ -275,7 +279,7 @@ if !dogui=1 then
 	' Defaults
 	if @upper(st_load_gui_settings)<>"T" then
 		string  st_spec_alias_list  = ""
-		string st_spool_name = "sp_spec_evalaution"
+		string st_spool_name = "sp_spec_evaluation"
 		string st_report_file = ""
 		!use_names = 0
 		!include_descriptions = 0
