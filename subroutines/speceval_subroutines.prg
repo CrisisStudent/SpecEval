@@ -4324,11 +4324,15 @@ for !srs = 1 to @wcount(st_shock_variables)
 
 	' 6.3.3 Merged graph
 	graph gp_sr_{%ShockVar}.merge gp_response1 gp_response2 gp_shock1 gp_shock2
-	gp_sr_{%ShockVar}.align(2,1,3)
+	gp_sr_{%ShockVar}.align(2,1,2.5)
 
 	'Adding response/shock labels
-	gp_sr_{%ShockVar}.addtext(t,sb) Response - {%sub_base_var}
-	gp_sr_{%ShockVar}.addtext(6.18,5,sb) Shock - {%ShockVar}
+	%heading = "Shock response: "+ %ShockVar + "--->"+ %sub_base_var
+	gp_sr_{%ShockVar}.setattr("heading") {%heading}
+	gp_sr_{%ShockVar}.addtext(t,lb) {%heading}
+	gp_sr_{%ShockVar}.addtext(6,-0.6,sb) Response - {%sub_base_var}
+	gp_sr_{%ShockVar}.addtext(6.18,4.8,sb) Shock - {%ShockVar}
+
 
 	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 
 
@@ -4548,11 +4552,14 @@ for !r = 1 to @wcount(st_regressor_list)
 
 	' 7.3.3 Merged graph
 	graph gp_sr_reg{!r}.merge gp_response1 gp_response2 gp_shock1 gp_shock2
-	gp_sr_reg{!r}.align(2,1,3)
+	gp_sr_reg{!r}.align(2,1,2.5)
 
 	'Adding response/shock labels
-	gp_sr_reg{!r}.addtext(t,sb) Response - {%sub_base_var}
-	gp_sr_reg{!r}.addtext(6.18,5,sb) Shock - {%reg}
+	%heading = "Shock response: "+ %reg + "--->"+ %sub_base_var
+	gp_sr_reg{!r}.setattr("heading") {%heading}
+	gp_sr_reg{!r}.addtext(t,lb) {%heading}
+	gp_sr_reg{!r}.addtext(6,-0.6,sb) Response - {%sub_base_var}
+	gp_sr_reg{!r}.addtext(6.18,4.8,sb) Shock - {%reg}
 
 	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 
 
@@ -6166,6 +6173,7 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 		delete(noerr) sp_var_responses
 		spool sp_var_responses
 	
+		'Determining list of all shock variables
 		string st_shock_variables_all = ""
 	
 		for !spec_id = 1 to sc_spec_count 
@@ -6174,17 +6182,40 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 			st_shock_variables_all = @wunion(st_shock_variables_all,st_shock_variables_{st_alias})
 		next
 	
-	
+		'Creating subspool		
 		for %sv {st_shock_variables_all}
+
 			delete(noerr) sp_sr_{%sv}
 			spool sp_sr_{%sv}
-	
+
+			'Adding specification identifier to graph headings
+			for !spec_id = 1 to sc_spec_count 
+
+				call spec_alias	
+
+				if @isobject("gp_sr_"+ %sv +  "_" + st_alias) then
+					
+					%heading = gp_sr_{%sv}_{st_alias}.@attr("heading")
+				
+					if @upper(st_use_names) = "T" then			
+						%eq_name = @word(st_specification_list,!spec_id)
+						%heading = %heading + " -  " + %eq_name
+					else
+						%heading = %heading + " - Specification "+ st_alias
+					endif
+					
+					gp_sr_{%sv}_{st_alias}.addtext(t,lb) {%heading}
+				endif
+			next
+		
+			'Inserting into spool
 			call insert_specs("sp_sr_" + %sv,"gp_sr_" + %sv, st_use_names)	
 			
 			sp_var_responses.insert(name={%sv}) sp_sr_{%sv}
 			delete(noerr) sp_sr_{%sv}
 		next
 	
+		'Adding comments
 		%obj_name =  "Shock response graphs - independent variable shocks" 
 		%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked independent variable \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single independent variable, orange)"
 		call comment_string(%obj_name,%obj_desc,"n","n",st_include_descriptions)
@@ -6201,6 +6232,7 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 		delete(noerr) sp_reg_responses
 		spool sp_reg_responses
 	
+		'Determining list of all regerssors
 		string st_regressor_list_all = ""
 	
 		for !spec_id = 1 to sc_spec_count 
@@ -6221,6 +6253,22 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 
 				call spec_alias	
 
+				'Adding specification identifier to graph headings
+				if @isobject("gp_sr_reg"+ @str(!r) +  "_" + st_alias) then
+					
+					%heading = gp_sr_reg{!r}_{st_alias}.@attr("heading")
+				
+					if @upper(st_use_names) = "T" then			
+						%eq_name = @word(st_specification_list,!spec_id)
+						%heading = %heading + " -  " + %eq_name
+					else
+						%heading = %heading + " - Specification "+ st_alias
+					endif
+					
+					gp_sr_reg{!r}_{st_alias}.addtext(t,lb) {%heading}
+				endif
+
+				' Identifying regressor position
 				!reg_n_original = @wcount(st_regressor_list_{st_alias})
 
 				for !rr = 1 to !reg_n_original
@@ -6231,16 +6279,19 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 					endif
 				next
 
+				'Insertingting into subspool
 				if !reg_position>0 then
 					call insert_spec("sp_sr_reg"+ @str(!r),"gp_sr_reg"+ @str(!reg_position),st_use_names)
 				endif
 
 			next
 		
+			'Inserting inteo master spool
 			sp_reg_responses.insert(name=reg{!r}) sp_sr_reg{!r}
 			delete(noerr) sp_sr_reg{!r}
 		next
 	
+		'Adding comments
 		%obj_name =  "Shock response graphs - Regressor shocks" 
 		%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked regressors \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single regressor, orange)"
 		call comment_string(%obj_name,%obj_desc,"n","n",st_include_descriptions)
