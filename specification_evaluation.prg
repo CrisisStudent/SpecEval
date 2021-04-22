@@ -74,7 +74,19 @@ if !dogui=1 then
 		!advanced_options = 0
 		!store_settings = 0
 	else
-		if @instr("  " + @upper(st_specification_list) + " ","  " + @upper(_this.@name) + " ")=0 or @isempty(@upper(_this.@name)) then 
+		%full_pec_list = ""
+
+		%patterns = @wdelim(st_specification_list,","," ")			
+		
+		for %pattern {%patterns}
+			if @instr(@upper(%pattern),"*")>0 then		
+				%full_pec_list =   %full_pec_list + " " + @wlookup(%pattern,"equation")			
+			else
+				string %full_pec_list =   %full_pec_list + " " + %pattern
+			endif
+		next
+
+		if @instr("  " + @upper(%full_pec_list) + " "," " + @upper(_this.@name) + " ")=0 or @isempty(@upper(_this.@name)) then 
 			string st_specification_list = _this.@name + "*"
 		endif
 	endif
