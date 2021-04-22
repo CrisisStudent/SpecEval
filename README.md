@@ -21,6 +21,8 @@ Current development list - roughly in order of priority - is following:
 
 •	Multiple specification subsample graphs
 
+•	Allow for using dependent varaible rather than base variable
+
 •	Scenario graphs – add check for trending of additional series
 
 •	Mixed in-sample out-of-sample option
