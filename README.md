@@ -1,7 +1,9 @@
 # SpecEval
 Eviews add-in that performs evaluation of (forecasting properties of) equation/VAR/identity object(s) and prepares report summarizing the results.
 
+
 See Specification_evalauation.pdf for full documentation of the add-in.
+
 
 Current development list - roughly in order of priority - is following:
 
