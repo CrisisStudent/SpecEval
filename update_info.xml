@@ -1,8 +1,8 @@
 <item>
 <title>speceval</title>
 <path>specification_evaluation.prg</path>
-<version>1.0</version>
+<version>1.1</version>
 <description>Performs evaluation of (forecasting properties of) equation/VAR/identity object(s) and prepares report summarizing the results.</description>
 <link>https://raw.githubusercontent.com/CrisisStudent/SpecEval/master/Package/SpecEval.aipz</link>
-<pubDate>4 Apr 2021</pubDate>
+<pubDate>8 Oct 2021</pubDate>
 </item>
