@@ -101,12 +101,11 @@ for !spec_id = 1 to sc_spec_count
 		statusline Storing results with alias ({st_spec_name})
 		call results_aliasing(st_alias)
 	endif
-	
+
 	'Cleaning up
 	statusline Cleaning up ({st_spec_name})
 	call cleaning_up_objects(@word(st_specification_list,!spec_id))
 
-	
 next
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -126,7 +125,9 @@ endif
 ' ##### 10.0 Storign and displaying outputs ###########
 ' ############################################
 
-{st_spool_name}.display
+if @upper(st_display)="T" then
+	{st_spool_name}.display
+endif
 
 if (@upper(st_save_output)="F")=0 then
 	call speceval_store
@@ -160,5 +161,4 @@ endif
 delete(noerr) st_alias st spec_name
 
 statusline Specification evaluation is done.
-
 

@@ -58,7 +58,6 @@ if !dogui=1 then
 	else
 		string st_load_gui_settings = "F"
 	endif
-
 	
 	' 2.1 Basic settings
 
@@ -74,19 +73,7 @@ if !dogui=1 then
 		!advanced_options = 0
 		!store_settings = 0
 	else
-		%full_pec_list = ""
-
-		%patterns = @wdelim(st_specification_list,","," ")			
-		
-		for %pattern {%patterns}
-			if @instr(@upper(%pattern),"*")>0 then		
-				%full_pec_list =   %full_pec_list + " " + @wlookup(%pattern,"equation")			
-			else
-				string %full_pec_list =   %full_pec_list + " " + %pattern
-			endif
-		next
-
-		if @instr("  " + @upper(%full_pec_list) + " "," " + @upper(_this.@name) + " ")=0 or @isempty(@upper(_this.@name)) then 
+		if @instr("  " + @upper(st_specification_list) + " ","  " + @upper(_this.@name) + " ")=0 or @isempty(@upper(_this.@name)) then 
 			string st_specification_list = _this.@name + "*"
 		endif
 	endif
@@ -147,9 +134,9 @@ if !dogui=1 then
 		"edit",st_tfirst_scenarios,"Enter starting date of scenarios", 10, _
 		"edit",st_tlast_scenarios,"Enter ending date of scenarios", 10, _
 		"edit",st_tfirst_sgraph,"Enter starting date of scenario graphs", 10, _
-		"edit",st_tfirst_shocks,"Enter starting date of scenarios", 10, _
-		"edit",st_tlast_shocks,"Enter ending date of scenarios", 10, _
-		"edit",st_tfirst_shockgraph,"Enter starting date of scenario graphs", 10)		
+		"edit",st_tfirst_shocks,"Enter starting date of shocks", 10, _
+		"edit",st_tlast_shocks,"Enter ending date of shocks", 10, _
+		"edit",st_tfirst_shockgraph,"Enter starting date of shock graphs", 10)		
 		
 	endif
 
@@ -210,7 +197,7 @@ if !dogui=1 then
 		"radio",!percentage_error,"Do you want to use percentage errors?","Auto Yes No", _
 		"Colbreak", _
 		"text","PERFORMANCE GRAPH OPTIONS", _	
-		"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Index ""Deviation from baseline""", _
+"radio",!transformation,"Which transformation you want to use?","Level ""Growth rate"" ""Spread from benchmark"" ""Ratio to benchmark"" Logarithm Index ""Deviation from baseline""", _
 		"edit",st_graph_benchmark,"Enter name of series you wish to use as spread/ratio benchmark", _
 		"edit",st_index_period,"Enter index period date", _
 		"edit",st_graph_add_backtest,"Enter the list of series to include in backtest graphs",100, _
@@ -302,6 +289,7 @@ if !dogui=1 then
 		!keep_settings = 0
 		!store_gui = 1
 		!save_output = 4
+		string st_display="t"
 	endif
 
 	if !store_settings = 1 then
@@ -472,6 +460,7 @@ if !dogui=0 then
  	string st_use_names = @equaloption("USE_NAMES")		
 
 	string st_save_output = @equaloption("SAVE")
+	string st_display = @equaloption("DISPLAY")
 
 	' Initializing with defaults if option has not been specified
 
@@ -533,6 +522,10 @@ if !dogui=0 then
 
 	if @isempty(st_save_output) then
 		st_save_output = "f"
+	endif
+
+	if @isempty(st_display) then
+		st_display = "t"
 	endif
 
 	if @upper(st_save_output)="D" or @upper(st_save_output)="USER" then

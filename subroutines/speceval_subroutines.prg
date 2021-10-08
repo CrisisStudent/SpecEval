@@ -11,7 +11,7 @@
 '	3) subroutine get_spec_add_info
 
 '	4) subroutine recursive_forecasts
-'		a) subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_short_list)
+'		a) subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_full_list)
 '			- subroutine regressor_group(string %sub_eq_name)
 '			- subroutine sb_identification(string %sub_tb_name,string %sub_group_name)
 '			- subroutine sb_identification_identity(string %sub_identity_name)
@@ -360,7 +360,7 @@ subroutine exec_list_implementation
 
 %multiple_components_list = "ALL SHORT NORMAL LONG REPORT"
 
-%complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %multiple_components_list
+%complete_component_list = %full_component_list  + "  " + %graphs_component_list + " " + %scenarios_component_list+ " " + %shocks_component_list + " " + %multiple_components_list
 
 ' Default 
 string st_exec_list = ""
@@ -476,21 +476,21 @@ if @wcount(%remove_list)>0 then
 endif
 
 ' Replacing aggregate options
-if @instr(" " + @upper(st_exec_list)," GRAPHS ") then
+if @instr(" " + @upper(st_exec_list) + " "," GRAPHS ") then
 	st_exec_list = @replace(@upper(st_exec_list)," GRAPHS "," " + %graphs_component_list + " ")
 endif
 
-if @instr(" " + @upper(st_exec_list)," SCENARIOS ") then
+if @instr(" " + @upper(st_exec_list) + " "," SCENARIOS ") then
 	st_exec_list = @replace(@upper(st_exec_list)," SCENARIOS "," " + %scenarios_component_list + " ")
 endif
 
-if @instr(" " + @upper(st_exec_list)," SCENARIOS_INDIVIDUAL ") or @instr(" " + @upper(st_exec_list)," SCENARIOS_ALL ") then
-	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_ALL","SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS")
-	st_exec_list = @replace(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL","SCENARIOS_INDIVIDUAL SCENARIOS_LEVEL SCENARIOS_TRANS")
+if @instr(" " + @upper(st_exec_list) + " "," SCENARIOS_INDIVIDUAL ") or @instr(" " + @upper(st_exec_list)," SCENARIOS_ALL ") then
+	st_exec_list = @replace(" " + @upper(st_exec_list) + " "," SCENARIOS_ALL "," SCENARIOS_ALL SCENARIOS_LEVEL SCENARIOS_TRANS ")
+	st_exec_list = @replace(" " + @upper(st_exec_list) + " "," SCENARIOS_INDIVIDUAL "," SCENARIOS_INDIVIDUAL SCENARIOS_LEVEL SCENARIOS_TRANS ")
 endif
 
-if @instr(" " + @upper(st_exec_list)," SHOCKS ") then
-	st_exec_list = @replace(@upper(st_exec_list)," SHOCKS "," " + %shocks_component_list + " ")
+if @instr(" " + @upper(st_exec_list) + " "," SHOCKS ") then
+	st_exec_list = @replace(" " + @upper(st_exec_list) + " "," SHOCKS "," " + %shocks_component_list + " ")
 endif
 
 if @instr(" " + @upper(%remove_list) + " "," GRAPHS ") then
@@ -555,9 +555,21 @@ endsub
 
 subroutine trend_identification(string %sub_var, string %sub_trend_default)
 
+' Checking variance of series 
 smpl @all
 series s_depvar= @d({%sub_var})
 !variance_subvar = @stdev(s_depvar)
+
+' Checking number of unique values (to avoid problem with categorical variables)
+vector v_uniquevals = @uniquevals({%sub_var})
+!unique_vals = v_uniquevals.@rows
+
+smpl @all if s_depvar = 0
+!no_change_count = @obssmpl
+
+smpl @all
+!no_change_share = !no_change_count/s_depvar.@obs	
+
 delete(noerr) s_depvar
 
 if !variance_subvar>0 then
@@ -565,7 +577,12 @@ if !variance_subvar>0 then
 	smpl @all
 	'equation et_{%sub_var}.ls {%sub_var} c @trend
 	'equation et_{%sub_var}.ls {%sub_var}-@elem({%sub_var},%sub_qfirst) {%sub_var}(-1)-@elem({%sub_var},%sub_qfirst) @trend
-	equation et_{%sub_var}.ls @d({%sub_var}) c
+
+	if !unique_vals>20 and !no_change_share<0.5 then
+		equation et_{%sub_var}.qreg(quant=0.5) @d({%sub_var}) c
+	else
+		equation et_{%sub_var}.ls @d({%sub_var}) c
+	endif
 	
 	if @upper(%sub_trend_default) = "T" then
 		if et_{%sub_var}.@pval(1)>0.15 then
@@ -689,6 +706,8 @@ if @upper(st_keep_objects)="F" and sc_spec_count=1 then
 		for %s {st_scenarios} all
 			delete(noerr) gp_csf_*_{%s}
 		next
+
+		delete(noerr) gp_csf_*_all
 	endif
 
 	if @isobject("st_shock_variables") then
@@ -737,7 +756,7 @@ if @upper(st_keep_information)="F" then
 '	endif
 endif
 
-' 5. Restoring modified option
+' Restoring
 if @upper(%restore_auto_selection)="T" then
 	st_auto_selection = "T"
 endif
@@ -918,8 +937,8 @@ else
 				
 		' In case object does not exist check if if exists in model objects specified by user
 		if @upper(%object_exists)="F" and @isempty(st_model_name_add)=0 and @isobject(st_model_name_add) then
-			%model_spec = {st_model_name_add}.@spec(%no_alias_name)	
-						
+			%model_spec = {st_model_name_add}.@spec(%no_alias_name)
+					
 			if @isempty(%model_spec)=0 then
 				if @left(%model_spec,1)=":" then
 					st_add_eq_name = @mid(%model_spec,2)
@@ -975,6 +994,8 @@ subroutine recursive_forecasts
 ' 1. Sample boundaries
 
 ' Main equation
+delete(noerr) st_tfirst_backtest st_tlast_backtest
+
 if @upper(st_auto_selection)="T" then
 	call sample_boundaries(st_spec_name,"f","t")
 else
@@ -1014,6 +1035,11 @@ next
 !forecastp_n = @dtoo(st_tlast_backtest)-@dtoo(st_tfirst_backtest)+1
 scalar sc_forecastp_n = !forecastp_n
 
+if !forecastp_n<0 then
+	@uiprompt("No forecast periods are available")
+	stop
+endif
+
 ' 2. Creating table to hold forecast 
 call create_forecast_number_tb
 
@@ -1039,7 +1065,7 @@ for !fp = 1 to !forecastp_n
 	next 
 	
 	' 5. Forecasting
-	call creating_forecasts("m_speceval",%fstart,st_tlast_backtest,st_base_var,st_forecast_dep_var)	
+	call creating_forecasts("m_speceval",%fstart,st_tlast_backtest,st_base_var,st_forecast_dep_var)
 
 	call subsample_ident
 
@@ -1067,12 +1093,26 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_short_list)
+subroutine sample_boundaries(string %sub_eq_name, string %sub_preserve_boundaries, string %sub_full_list)
+
+' @ Description
+' 	- Subroutine to determine sample boundaries for equation or identity (i.e. sample over which given equation or identity is able to produce foreasct for dependeent variable given the available data for independent variables)
+' @ Arguments
+' 	- %sub_eq_name: 						Name of equation or identity object
+' 	- %sub_preserve_boundaries: 		Indicator if previously determined boundaries should be respected (i.e. sample boundaries will not be expanded)
+' 	- %sub_full_list: 							Indicator of full list of regressors should be used (relevant for equations with automatically selected number of lags of regressors)
+' @Requirements
+' 	- 
+' @ Example use
+'  	- call ... Creates ...
+' @ Locations
+' 	- ....: ...
+
 
 if {%sub_eq_name}.@type<>"STRING" then
 
 	' 1. Creating regressor group
-	call regressor_group(%sub_eq_name,%sub_short_list)
+	call regressor_group(%sub_eq_name,%sub_full_list)
 
 	' 2. Identifying smaple boundaries
 	call sb_identification("tb_sb_" + %sub_eq_name,"gr_"+ %sub_eq_name+ "_regs" )
@@ -1091,7 +1131,7 @@ endsub
 
 ' $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
-subroutine regressor_group(string %sub_eq_name, string %sub_short_list)
+subroutine regressor_group(string %sub_eq_name, string %sub_full_list)
 
 'Equatiion
 if {%sub_eq_name}.@type="EQUATION" then
@@ -1297,8 +1337,6 @@ subroutine sample_boundaries_adjust(string %sub_eq_name, string %sub_outofsample
 
 ' 1. Shifting backtest start for out-of-sample forecasting 
 
-' Determning backtest start shift due to reestimation
-
 if @upper(%sub_outofsample) = "T" then 
 	call backtest_start_shift(%sub_eq_name, %sub_outofsample,  %sub_auto_selection, %sub_object_alias)
 	%tfirst = @otod(@dtoo(st_tfirst_backtest)+ sc_backtest_start_shift)
@@ -1321,6 +1359,26 @@ if @upper(%sub_outofsample) = "T" then
 				%tfirst = %tfirst_estimation
 			endif
 		endif
+	endif
+endif
+
+' 3. Adjusting backtest start based on presence of ARMA terms (only in case when in-sample is performed)
+if @upper(%sub_outofsample) = "F" then 
+	if (@instr(@upper({%sub_eq_name}.@spec),"AR(")>0) or (@instr(@upper({%sub_eq_name}.@spec),"MA(")>0)  then
+		%regs = {%sub_eq_name}.@spec
+		for %reg {%regs}
+			!max_arma = 0
+			if @upper(@left(%reg,3)) ="AR("  or @upper(@left(%reg,3)) ="MA(" then
+				%arma_order = @mid(%reg,4)
+				!arma_order = @val(@left(%arma_order,@length(%arma_order)-1))
+				
+				if !arma_order>!max_arma then
+					!max_arma = !arma_order
+				endif
+			endif	
+		next
+
+		%tfirst = @otod(@dtoo(%tfirst)+!max_arma)
 	endif
 endif
 
@@ -1568,6 +1626,7 @@ endsub
 subroutine create_forecast_model(string %sub_eq_name, string %sub_cf_model_name, string %sub_forecast_dep_var, scalar !sub_add_eq_count)
 
 'Create model
+delete(noerr) {%sub_cf_model_name}
 model {%sub_cf_model_name}
 
 'Add main equation
@@ -3304,19 +3363,19 @@ call missing_scen_variables
 ' 6. Defining forecasting sample
 
 ' Start date
-if @isobject("tb_sb_" + st_spec_name)=0 then
-	call sample_boundaries(st_spec_name,"f","f")	
-endif
+' Warning: Currently this does not account for the case when base varaible ends sooner than all other regressors, since one of the regressors is dependent variable. We would need to check the regressors ignoring the constraing arising in base varaible
 
 if @isempty(st_tfirst_scenarios)=0 then
-	if @dtoo(tb_sb_{st_spec_name}(2,3))<@dtoo(st_tfirst_scenarios) then
-		st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_spec_name}(2,3))+1)
+	if @dtoo({st_base_var}.@last)<@dtoo(st_tfirst_scenarios) then
+		st_tfirst_scenarios = @otod(@dtoo({st_base_var}.@last)+1)
 	endif
 else
-	st_tfirst_scenarios = @otod(@dtoo(tb_sb_{st_spec_name}(2,3))+1)
+	st_tfirst_scenarios = @otod(@dtoo({st_base_var}.@last)+1)
 endif
 
 ' Adjusting start date in case of additional equations
+' Warning: this currently does not account for the case when additional varaibles have history past the last regressor date (see above)
+
 if @isobject("sc_add_eq_count") then
 	if sc_add_eq_count>0 then
 		for !add_eq = 1 to sc_add_eq_count
@@ -3621,7 +3680,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
 		%gs = gr_scen_graph.@seriesname(!gs)
 	
 		if @upper(%sub_transformation)="INDEX" then
-			%graph_string = %graph_string + %gs + "/" +	"@elem(" + %gs + + "," + %csf_base_q + ")*100" + " "
+			%graph_string = %graph_string + %gs + "/" +	"@elem(" + %gs + + "," + st_index_period + ")*100" + " "
 		else
 			%graph_string = %graph_string + %gs + " "
 		endif
@@ -3871,6 +3930,8 @@ endsub
 
 subroutine csf_all_scenario_graphs(string %sub_scenario_forecast, string %sub_transformation)
 
+delete(noerr) gr_all_scen_graph  gp_csf_level_all gp_csf_trans_all
+
 ' 1. Level graphs
 
 if @instr(@upper(st_exec_list),"SCENARIOS_LEVEL") then
@@ -3962,15 +4023,17 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 	
 
 	' Devaitions from baseline graph string 
-	if @upper(%sub_transformation)="DEVIATION" then
+	if @upper(%sub_transformation)="DEVIATION"  then
 		
 	
 		%graph_string = ""
 	
 		%model_baseline_series =  @replace(@upper(%sub_scenario_forecast),"{S}",%baseline_alias)
 	
-		for %scenario {st_scenarios}
-			%gs = @replace(@upper(%sub_scenario_forecast),"{S}",%scenario)
+		for !s=1 to @wcount(st_scenarios)
+			%s = @word(st_scenarios,!s)	
+
+			%gs = @replace(@upper(%sub_scenario_forecast),"{S}",%s)
 	
 			if @upper(st_percentage_error)="T" then
 				%graph_string = %graph_string + " " + "(" + %gs + "/" + %model_baseline_series + "-1" + ")*100" 
@@ -3992,14 +4055,22 @@ if @instr(@upper(st_exec_list),"SCENARIOS_TRANS") then
 		next
 	else
 		
-		!elem = 0
+		gp_csf_trans_all.setelem(1) legend() linepattern(dash6) linecolor(black)
+		gp_csf_trans_all.options linepat
+
+		!elem = 1
 		for !s=2 to @wcount(st_scenarios)
 			%s = @word(st_scenarios,!s)	
 			!elem = !elem +1
-			gp_csf_trans_all.setelem(!elem) legend(Model {%s} forecast)
-		next
+
+			if @upper(st_percentage_error)="T" then
+				gp_csf_trans_all.setelem(!elem) legend(Model {%s} forecast (deviation from model {%baseline_alias} forecast))
+			else
+				gp_csf_trans_all.setelem(!elem) legend(Model {%s} forecast (difference from model {%baseline_alias} forecast))
+			endif
+		next		
 	endif
-	
+
 	' Adding description text
 	if @upper(%sub_transformation)<>"SPREAD" and @upper(%sub_transformation)<>"RATIO" and @upper(%sub_transformation)<>"DEVIATION" then
 		if @upper(st_percentage_error)="T" then
@@ -4044,71 +4115,85 @@ subroutine shock_responses(string %sub_eq_name, string %sub_base_Var, string %su
 ' 1. Creating forecast model
 if @isobject("m_speceval")=0 then
 	call create_forecast_model(%sub_eq_name,"m_speceval",%sub_forecast_depvar,  !sub_add_eq_count)
+	%intermediate_objects = %intermediate_objects +  "m_speceval" + " "
 endif
 
 ' 2. Identifying shock variables
 
 'Independent variables
-delete(noerr) gr_regs
-{%sub_eq_name}.makeregs gr_regs	
-string st_shock_variables = @wunique(gr_regs.@depends)
-string st_shock_variables = @replace(" "+ @upper(st_shock_variables) + " "," "+ @upper(%sub_base_var)+ " "," ")
-
-if @wcount(st_shock_variables)=0 then
-	!sub_include_varshocks = 0
-	delete(noerr) st_shock_variables
+if !sub_include_varshocks=1 then
+	delete(noerr) gr_regs
+	{%sub_eq_name}.makeregs gr_regs	
+	string st_shock_variables = @wunique(gr_regs.@depends)
+	string st_shock_variables = @replace(" "+ @upper(st_shock_variables) + " "," "+ @upper(%sub_base_var)+ " "," ")
+	
+	if @wcount(st_shock_variables)=0 then
+		!sub_include_varshocks = 0
+		delete(noerr) st_shock_variables
+	endif
 endif
 
 'Regressors
-string st_regressor_list = {%sub_eq_name}.@varlist 
-st_regressor_list = @replace(" " + @upper(st_regressor_list) + " "," " + @upper(@word(st_regressor_list,1)) + " ","")
+if !sub_include_regshocks=1 then
+	string st_regressor_list = {%sub_eq_name}.@varlist 
+	st_regressor_list = @replace(" " + @upper(st_regressor_list) + " "," " + @upper(@word(st_regressor_list,1)) + " ","")
+	
+	if @instr(" "+ @upper(st_regressor_list) + " "," C ")>0 then
+		st_regressor_list = @replace(" " + @upper(st_regressor_list) + " "," C ","")
+		%constant_present = "t"
+	endif
+	
+	if @wcount(st_regressor_list)=0 then
+		!sub_include_regshocks = 0
+		delete(noerr) st_regressor_list
+	endif
 
-if @instr(" "+ @upper(st_regressor_list) + " "," C ")>0 then
-	st_regressor_list = @replace(" " + @upper(st_regressor_list) + " "," C ","")
-	%constant_present = "t"
-endif
-
-if @wcount(st_regressor_list)=0 then
-	!sub_include_regshocks = 0
-	delete(noerr) st_regressor_list
+	
+	st_regressor_list = @wdrop(st_regressor_list,"@")
+	st_regressor_list = @wdrop(st_regressor_list,"PDL*")
+	
 endif
 
 '3. Creating no shock path for shock variables
 
 ' Independent varaibles
-for %ShockVar {st_shock_variables}
-	if @isempty(%sub_noshock_scenario)  or @isobject(%ShockVar + "_"+ %sub_noshock_scenario)=0  then
-		smpl @all
-		series {%ShockVar}_srb = {%ShockVar}
-	else
-		smpl @all
-		series {%ShockVar}_srb = {%ShockVar}_{%sub_noshock_scenario}
-	endif
-next
+if !sub_include_varshocks=1 then
+	for %ShockVar {st_shock_variables}
+		if @isempty(%sub_noshock_scenario)  or @isobject(%ShockVar + "_"+ %sub_noshock_scenario)=0  then
+			smpl @all
+			series {%ShockVar}_srb = {%ShockVar}
+		else
+			smpl @all
+			series {%ShockVar}_srb = {%ShockVar}_{%sub_noshock_scenario}
+		endif
+	next
+endif
 
 'Regressors
-for !r = 1 to @wcount(st_regressor_list)
-	%reg = @word(st_regressor_list,!r)
-
-	if @isempty(%sub_noshock_scenario)=0  then
-		for  %ev {st_shock_variables}
-
-			if @isobject(%ev + "_"+ %sub_noshock_scenario) then
-				%reg = @replace(@upper(%reg),@upper(%ev),%ev + "_" + %sub_noshock_scenario )
-			endif
-		next
-	endif
-
-	series s_reg{!r}_srb = {%reg}
-
-next
+if !sub_include_regshocks=1 then
+	for !r = 1 to @wcount(st_regressor_list)
+		%reg = @word(st_regressor_list,!r)
+	
+		if @isempty(%sub_noshock_scenario)=0  then
+			for  %ev {st_shock_variables}
+	
+				if @isobject(%ev + "_"+ %sub_noshock_scenario) then
+					%reg = @replace(@upper(%reg),@upper(%ev),%ev + "_" + %sub_noshock_scenario )
+				endif
+			next
+		endif
+	
+		series s_reg{!r}_srb = {%reg}
+	
+	next
+endif
 
 ' 4 Defining shock forecast dates
 
 ' Start date
 if @isempty(%sub_tfirst_shocks) then
 	if @isobject("tb_sb_" + %sub_eq_name)=0 then
-		call sample_boundaries(%sub_eq_name,"f")	
+		call sample_boundaries(%sub_eq_name,"f","t")	
 	endif
 	
 	string st_tfirst_shocks = @otod(@dtoo(tb_sb_{%sub_eq_name}(2,3))-12)
@@ -4119,7 +4204,7 @@ endif
 ' Initializing end date
 if @isempty(%sub_tlast_shocks) then
 	if @isobject("tb_sb_" + st_spec_name)=0 then
-		call sample_boundaries(%sub_eq_name,"f")	
+		call sample_boundaries(%sub_eq_name,"f","t")	
 	endif
 	
 	string st_tlast_shocks = @otod(@dtoo(tb_sb_{%sub_eq_name}(2,3)))
@@ -4229,7 +4314,7 @@ for %ShockVar {st_shock_variables}
 	
 		if @upper(%shock_transformation)="DLOG" then
 			smpl {st_tfirst_shocks} {st_tfirst_shocks}
-			series @d({%ShockVar}_srs) = @dlog({%ShockVar}_srs)-!shock
+			series @dlog({%ShockVar}_srs) = @dlog({%ShockVar}_srs)-!shock
 	
 			if @upper(%sub_shock_type) = "PERMANENT" then 
 				smpl {st_tfirst_shocks}+1 {st_tlast_shocks}
@@ -4324,15 +4409,16 @@ for !srs = 1 to @wcount(st_shock_variables)
 
 	' 6.3.3 Merged graph
 	graph gp_sr_{%ShockVar}.merge gp_response1 gp_response2 gp_shock1 gp_shock2
-	gp_sr_{%ShockVar}.align(2,1,2.5)
+	gp_sr_{%ShockVar}.align(2,1,3)
 
 	'Adding response/shock labels
-	%heading = "Shock response: "+ %ShockVar + "--->"+ %sub_base_var
-	gp_sr_{%ShockVar}.setattr("heading") {%heading}
-	gp_sr_{%ShockVar}.addtext(t,lb) {%heading}
-	gp_sr_{%ShockVar}.addtext(6,-0.6,sb) Response - {%sub_base_var}
-	gp_sr_{%ShockVar}.addtext(6.18,4.8,sb) Shock - {%ShockVar}
+	gp_sr_{%ShockVar}.addtext(t,sb) Response - {%sub_base_var}
 
+	if @upper(%{%ShockVar}_trans)="DLOG" then
+		gp_sr_{%ShockVar}.addtext(4.5,5,sb) Shock - {%ShockVar} [T]
+	else
+		gp_sr_{%ShockVar}.addtext(4.5,5,sb) Shock - {%ShockVar} [S]
+	endif
 
 	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 
 
@@ -4386,7 +4472,7 @@ for !r = 1 to @wcount(st_regressor_list)
 				%shock_transformation = "difference"
 			endif
 		endif
-		
+	
 		st_shock_transformations= st_shock_transformations + %reg + "=" + %shock_transformation + ", "
 		%reg{!r}_trans = %shock_transformation
 	
@@ -4435,7 +4521,7 @@ for !r = 1 to @wcount(st_regressor_list)
 	
 		if @upper(%shock_transformation)="DLOG" then
 			smpl {st_tfirst_shocks} {st_tfirst_shocks}
-			series @d(s_reg{!r}_srs) = @dlog(s_reg{!r}_srs)-!shock
+			series @dlog(s_reg{!r}_srs) = @dlog(s_reg{!r}_srs)-!shock
 	
 			if @upper(%sub_shock_type) = "PERMANENT" then 
 				smpl {st_tfirst_shocks}+1 {st_tlast_shocks}
@@ -4552,14 +4638,17 @@ for !r = 1 to @wcount(st_regressor_list)
 
 	' 7.3.3 Merged graph
 	graph gp_sr_reg{!r}.merge gp_response1 gp_response2 gp_shock1 gp_shock2
-	gp_sr_reg{!r}.align(2,1,2.5)
+	gp_sr_reg{!r}.align(2,1,3)
 
 	'Adding response/shock labels
-	%heading = "Shock response: "+ %reg + "--->"+ %sub_base_var
-	gp_sr_reg{!r}.setattr("heading") {%heading}
-	gp_sr_reg{!r}.addtext(t,lb) {%heading}
-	gp_sr_reg{!r}.addtext(6,-0.6,sb) Response - {%sub_base_var}
-	gp_sr_reg{!r}.addtext(6.18,4.8,sb) Shock - {%reg}
+	gp_sr_reg{!r}.addtext(t,sb) Response - {%sub_base_var}
+
+	if @upper(%s_reg{!r}_trans)="DLOG" then
+		gp_sr_reg{!r}.addtext(4.5,5,sb) Shock - {%reg} [T]
+	else
+		gp_sr_reg{!r}.addtext(4.5,5,sb) Shock - {%reg} [S]
+	endif
+
 
 	delete(noerr) gp_response1 gp_response2 gp_shock1 gp_shock2 
 
@@ -4597,7 +4686,7 @@ if @instr(@upper(st_exec_list),"REG_OUTPUT") and {st_spec_name}.@type<>"STRING" 
 	{st_spool_name}.insert(name=regression_output) tb_reg_output
 
 	%obj_name =  "Regression output"
-	%obj_desc = "- Coefficients: blue=negative; orange=positive \n - Tstats/pvals: green=significant,red=insignificant,yellow=marginally significant"  
+	%obj_desc = "- Coefficients: dark red=negative; dark green=positive \n - Tstats/pvals: light green=significant,yellow=marginally significant,orange=insignificant"  
 	call comment_string(%obj_name,%obj_desc,"y",st_use_names,st_include_descriptions)
 	{st_spool_name}.comment regression_output %comment
 
@@ -5625,12 +5714,18 @@ if @isempty(st_scenarios)=0 then
 endif
 
 if @isobject("st_shock_variables") then
+
+	%object_list = %object_list + " " + "st_shock_variables"
+
 	for %sv {st_shock_variables}
 		%object_list = %object_list + " " + "gp_sr_" + %sv + " "
 	next
 endif
 
 if @isobject("st_regressor_list") then
+
+	%object_list = %object_list + " " + "st_regressor_list"
+
 	for !r = 1 to @wcount(st_regressor_list)
 		%object_list = %object_list + " " + "gp_sr_reg" + @str(!r) + " "
 	next
@@ -5673,10 +5768,8 @@ if @upper(st_keep_forecasts)="T" then
 endif
 
 'Information objectys
-%object_list = %object_list +" " +  "st_shock_variables st_regressor_list" + " "
-
 if @upper(st_keep_information)="T" then
-	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength st_shock_transformations"
+	%object_list = %object_list + " " + "st_estimation_sample st_tfirst_estimation st_tlast_estimation st_tfirst_backtest st_tlast_backtest tb_forecast_numbers tb_sb_eq_ardl_d_dr_aic sc_forecastp_n sc_backtest_start_shift st_auto_info sp_var_model_selection s_laglength st_shock_variables st_regressor_list st_shock_transformations"
 
 	if @isempty(st_scenarios)=0 then
 		for %s {st_scenarios}
@@ -5684,6 +5777,8 @@ if @upper(st_keep_information)="T" then
 		next 			
 	endif
 endif
+
+%object_list = @wunique(%object_list)
 
 'string st_object_list = %object_list
 
@@ -5863,7 +5958,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SUMMARY") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - {%eq_name}
 				else
-					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - Specification {st_alias}
+					gp_forecasts_all_h{%fh}_{st_alias}.addtext(t) Conditional forecasts - {%fh} step ahead - Equation {st_alias}
 				endif
 
 				call insert_spec("sp_forecast_graphs_"+ %fh,"gp_forecasts_all_h" + %fh, st_use_names)
@@ -5901,7 +5996,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_SS") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - {%eq_name}
 				else
-					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - Specification {st_alias}
+					gp_forecast_subsample{!ss}_{st_alias}.addtext(t) Conditional forecasts for {st_subsample{!ss}} - Equation {st_alias}
 				endif
 
 				call insert_spec("sp_subsample" + @str(!ss),"gp_forecast_subsample" + @str(!ss), st_use_names)
@@ -5967,7 +6062,7 @@ if @instr(@upper(st_exec_list),"GRAPHS_BIAS") then
 					%eq_name = @word(st_specification_list,!spec_id)
 					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - {%eq_name}
 				else
-					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - Specification {st_alias}
+					gp_forecast_bias_h{%fh}_{st_alias}.addtext(t) Forecast bias - {%fh} step ahead - Equation {st_alias}
 				endif
 				
 				call insert_spec("sp_bias_graphs_"+ %fh,"gp_forecast_bias_h" + %fh, st_use_names)
@@ -6037,7 +6132,7 @@ if @instr(@upper(st_exec_list),"SCENARIOS_INDIVIDUAL") or @instr(@upper(st_exec_
 						%eq_name = @word(st_specification_list,!spec_id)
 						%heading = %heading + " -  " + %eq_name
 					else
-						%heading = %heading + " - Specification "+ st_alias
+						%heading = %heading + " - Equation "+ st_alias
 					endif
 					
 					gp_csf_{%type}_{%s}_{st_alias}.addtext(t) {%heading}
@@ -6102,7 +6197,7 @@ if @instr(@upper(st_exec_list),"DECOMPOSITION") and @instr(@upper(st_exec_list),
 						%eq_name = @word(st_specification_list,!spec_id)
 						%heading = %heading + " -  " + %eq_name
 					else
-						%heading = %heading + " - Specification "+ st_alias
+						%heading = %heading + " - Equation "+ st_alias
 					endif
 					
 					gp_csf_{%type}_{%s}_{st_alias}.addtext(t) {%heading}
@@ -6173,7 +6268,6 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 		delete(noerr) sp_var_responses
 		spool sp_var_responses
 	
-		'Determining list of all shock variables
 		string st_shock_variables_all = ""
 	
 		for !spec_id = 1 to sc_spec_count 
@@ -6182,40 +6276,17 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 			st_shock_variables_all = @wunion(st_shock_variables_all,st_shock_variables_{st_alias})
 		next
 	
-		'Creating subspool		
+	
 		for %sv {st_shock_variables_all}
-
 			delete(noerr) sp_sr_{%sv}
 			spool sp_sr_{%sv}
-
-			'Adding specification identifier to graph headings
-			for !spec_id = 1 to sc_spec_count 
-
-				call spec_alias	
-
-				if @isobject("gp_sr_"+ %sv +  "_" + st_alias) then
-					
-					%heading = gp_sr_{%sv}_{st_alias}.@attr("heading")
-				
-					if @upper(st_use_names) = "T" then			
-						%eq_name = @word(st_specification_list,!spec_id)
-						%heading = %heading + " -  " + %eq_name
-					else
-						%heading = %heading + " - Specification "+ st_alias
-					endif
-					
-					gp_sr_{%sv}_{st_alias}.addtext(t,lb) {%heading}
-				endif
-			next
-		
-			'Inserting into spool
+	
 			call insert_specs("sp_sr_" + %sv,"gp_sr_" + %sv, st_use_names)	
 			
 			sp_var_responses.insert(name={%sv}) sp_sr_{%sv}
 			delete(noerr) sp_sr_{%sv}
 		next
 	
-		'Adding comments
 		%obj_name =  "Shock response graphs - independent variable shocks" 
 		%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked independent variable \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single independent variable, orange)"
 		call comment_string(%obj_name,%obj_desc,"n","n",st_include_descriptions)
@@ -6232,7 +6303,6 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 		delete(noerr) sp_reg_responses
 		spool sp_reg_responses
 	
-		'Determining list of all regerssors
 		string st_regressor_list_all = ""
 	
 		for !spec_id = 1 to sc_spec_count 
@@ -6253,22 +6323,6 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 
 				call spec_alias	
 
-				'Adding specification identifier to graph headings
-				if @isobject("gp_sr_reg"+ @str(!r) +  "_" + st_alias) then
-					
-					%heading = gp_sr_reg{!r}_{st_alias}.@attr("heading")
-				
-					if @upper(st_use_names) = "T" then			
-						%eq_name = @word(st_specification_list,!spec_id)
-						%heading = %heading + " -  " + %eq_name
-					else
-						%heading = %heading + " - Specification "+ st_alias
-					endif
-					
-					gp_sr_reg{!r}_{st_alias}.addtext(t,lb) {%heading}
-				endif
-
-				' Identifying regressor position
 				!reg_n_original = @wcount(st_regressor_list_{st_alias})
 
 				for !rr = 1 to !reg_n_original
@@ -6279,19 +6333,16 @@ if @instr(@upper(st_exec_list),"SHOCKS") then
 					endif
 				next
 
-				'Insertingting into subspool
 				if !reg_position>0 then
 					call insert_spec("sp_sr_reg"+ @str(!r),"gp_sr_reg"+ @str(!reg_position),st_use_names)
 				endif
 
 			next
 		
-			'Inserting inteo master spool
 			sp_reg_responses.insert(name=reg{!r}) sp_sr_reg{!r}
 			delete(noerr) sp_sr_reg{!r}
 		next
 	
-		'Adding comments
 		%obj_name =  "Shock response graphs - Regressor shocks" 
 		%obj_desc = "- Top charts - alternative forecasts for base variable; Bottom charts - paths for shocked regressors \n - No-shock path (=forecast under base-scenario values, blue), shock path (=forecast with shock to single regressor, orange)"
 		call comment_string(%obj_name,%obj_desc,"n","n",st_include_descriptions)
@@ -6944,14 +6995,27 @@ subroutine speceval_store
  ' Name and mode
 if @isempty(st_report_file) then
 	if sc_spec_count=1 then
-		%output_file_name = st_spec_name + "_specification_evaluation"
+		%output_file_name = st_spec_name + "_specification_evaluation.pdf"
 	else
-		%output_file_name = st_base_var + "_specification_evaluation"
+		%output_file_name = st_base_var + "_specification_evaluation.pdf"
 	endif
 	
-	st_report_file = %output_file_name
+	st_report_file = @datapath + "\" + %output_file_name 
 else
-	%output_file_name = st_report_file
+	if @instr(st_report_file,".")=0 then
+		if sc_spec_count=1 then
+			%output_file_name = st_spec_name + "_specification_evaluation.pdf"
+		else
+			%output_file_name = st_base_var + "_specification_evaluation.pdf"
+		endif
+
+		st_report_file = st_report_file + "\" + %output_file_name 
+	endif	
+
+	if @instr(st_report_file,"\")=0 and @instr(st_report_file,"/")=0 then
+		st_report_file =  @datapath + "\"  + st_report_file
+	endif
+
 endif
 
 %pdf_mode = "i"
@@ -6971,10 +7035,10 @@ else
 	%prompt = ""
 endif
 
-{st_spool_name}.save(t=pdf,mode={%pdf_mode},{%comments},{%prompt}) %output_file_name
+%output_file_path = st_report_file
+{st_spool_name}.save(t=pdf,mode={%pdf_mode},{%comments},{%prompt}) %output_file_path
 
 endsub
 
 ' ##################################################################################################################
-
 
